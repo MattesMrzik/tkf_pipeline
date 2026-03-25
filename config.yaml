@@ -1,6 +1,8 @@
 # Tree Generation Parameters
 species: [10, 50]
-birth_death_rates: [1.0, 2.0]
+birth_death_rates:
+  - [1.0, 2.0]
+  - [1.4, 1.5]
 replicates: [1, 2, 3]
 
 sampling_fraction: [ 0.01, 0.25, 0.99]

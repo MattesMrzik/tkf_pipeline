@@ -1,40 +1,45 @@
 configfile: "config.yaml"
 
+import os
+
 # Path to evolver
 EVOLVER = config["evolver_path"]
+EVOLVER_DIR = os.path.dirname(EVOLVER)
 
-# Extracting parameters for expansion
+# Extracting parameters
 SPECIES = config["species"]
-BIRTH = config[ "birth_death_rates"][0]
-DEATH = config["birth_death_rates"][1]
+BIRTH_DEATH_PAIRS = config["birth_death_rates"]
 REPS = config["replicates"]
 SAMPLING = config["sampling_fraction"]
 MUTATION = config["mutation_rate"]
 
 rule all:
     input:
-        expand("results/tree_s{s}_b{b}_d{d}_f{f}_m{m}_r{r}.tre",
-               s=SPECIES,
-               b=BIRTH,
-               d=DEATH,
-               f=SAMPLING,
-               m=MUTATION,
-               r=REPS)
+        [
+            f"results/tree_s{s}_b{pair[0]}_d{pair[1]}_f{f}_m{m}_r{r}.tre"
+            for s in SPECIES
+            for pair in BIRTH_DEATH_PAIRS
+            for f in SAMPLING
+            for m in MUTATION
+            for r in REPS
+        ]
 
 rule generate_tree:
     output:
         "results/tree_s{s}_b{b}_d{d}_f{f}_m{m}_r{r}.tre"
     params:
-        evolver = EVOLVER
+        evolver = EVOLVER,
+        evolver_dir = EVOLVER_DIR
     shell:
         """
-        # Option 2: Rooted trees
-        # Next line: number of species
-        # Next line: 1 tree, random seed (replicate), want branch lengths (1)
-        # Next line: birth, death, sampling, mutation
-        printf "2\\n{wildcards.s}\\n1 {wildcards.r} 1\\n{wildcards.b} {wildcards.d} {wildcards.f} {wildcards.m}\\n0\\n" | {params.evolver}
+        # Run evolver from its own directory
+        # This ensures evolver.out is created in that directory
+        cd {params.evolver_dir}
+        printf "2\\n{wildcards.s}\\n1 {wildcards.r} 1\\n{wildcards.b} {wildcards.d} {wildcards.f} {wildcards.m}\\n0\\n" | ./evolver > /dev/null 2>&1
         
-        # Extract the tree from the end of evolver.out
-        tail -n 1 evolver.out > {output}
-        rm evolver.out
+        # Move the result to the destination (relative to current script path)
+        tail -n 1 evolver.out > "$OLDPWD/{output}"
+        
+        # Clean up
+        rm -f evolver.out
         """
