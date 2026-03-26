@@ -114,7 +114,6 @@ rule jati_inference:
     params:
         bin = JATI,
         paras = " ".join(map(str, JATI_PARAS)),
-        log_level = os.environ.get("JATI_LOG", "warn")
     shell:
         """
         mkdir -p {output.dir}
@@ -124,11 +123,7 @@ rule jati_inference:
             --model {wildcards.model} \
             --params {params.paras} \
             --gap-handling {wildcards.gap} \
-            --seed {wildcards.seed} \
-            --log-level {params.log_level} || true
-        
-        # Ensure the directory exists even if JATI fails
-        mkdir -p {output.dir}
+            --seed {wildcards.seed}         
         """
 
 rule jati_cleanup:
@@ -142,23 +137,10 @@ rule jati_cleanup:
         """
         mkdir -p {params.target_dir}
         
-        # Move contents out of the timestamped subdirectory if it exists
-        if [ \"$(ls -A {input.dir} 2>/dev/null)\" ]; then
-            mv {input.dir}/*/* {params.target_dir}/ 2>/dev/null || true
+        mv {input.dir}/*/* {params.target_dir}/ 2>/dev/null || true
             
-            # Remove timestamp prefixes from all files in the target directory
-            find {params.target_dir} -type f -name \"*_*\" | while read f; do mv $f ${{f%/*}}/${{f##*_}} 2>/dev/null || true; done
-            
-            # Specifically move the tree file to the final output path
-            if [ -f {params.target_dir}/tree.newick ]; then
-                mv {params.target_dir}/tree.newick {output.tree}
-            else
-                touch {output.tree} # Create empty file to satisfy snakemake
-            fi
-        else
-            touch {output.tree} # Create empty file to satisfy snakemake
-        fi
-        
-        # Clean up the raw output directory
-        rm -rf {input.dir}
+        # Remove timestamp prefixes from all files in the target directory
+        find {params.target_dir} -type f -name *_* | while read f; do mv $f ${{f%/*}}/${{f##*_}}             
+
+        mv {params.target_dir}/tree.newick {output.tree}
         """
