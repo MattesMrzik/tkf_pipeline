@@ -4,6 +4,22 @@ import json
 import argparse
 
 def calculate_distances(tree1_path, tree2_path, output_path):
+    tree1, tree2 = read_trees(tree1_path, tree2_path)
+
+    rf_distance = dendropy.calculate.treecompare.symmetric_difference(tree1, tree2)
+    kf_distance = dendropy.calculate.treecompare.euclidean_distance(tree1, tree2)
+
+    write_results(output_path, rf_distance, kf_distance)
+
+def write_results(output_path, rf_distance, kf_distance):
+    results = {
+        "robinson_foulds": float(rf_distance),
+        "kuhner_felsenstein": float(kf_distance)
+    }
+    with open(output_path, 'w') as f:
+        json.dump(results, f, indent=4)
+
+def read_trees(tree1_path, tree2_path):
     try:
         # We use suppress_leaf_node_taxa to avoid "duplicate taxon labels" errors,
         # then we map them to a unified TaxonNamespace for comparison.
@@ -46,20 +62,7 @@ def calculate_distances(tree1_path, tree2_path, output_path):
     tree1.is_rooted = False
     tree2.is_rooted = False
 
-    # Robinson-Foulds distance (symmetric difference)
-    rf_distance = dendropy.calculate.treecompare.symmetric_difference(tree1, tree2)
-    
-    # Kuhner-Felsenstein distance (branch score distance)
-    kf_distance = dendropy.calculate.treecompare.euclidean_distance(tree1, tree2)
-
-    results = {
-        "robinson_foulds": float(rf_distance),
-        "kuhner_felsenstein": float(kf_distance)
-    }
-
-    with open(output_path, 'w') as f:
-        json.dump(results, f, indent=4)
-
+    return (tree1, tree2)
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Calculate RF and KF distances between two trees.")
     parser.add_argument("--tree1", required=True, help="Path to the first tree (Newick)")
