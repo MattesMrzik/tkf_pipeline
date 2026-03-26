@@ -36,25 +36,18 @@ SIM_DIR = "results/msas/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}"
 # Using double braces to escape them in the f-string for Snakemake's consumption
 INF_DIR = "results/inference/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati"
 
+# Target Generator
+def get_all_inference_dirs():
+    return expand(INF_DIR, 
+                  s=SPECIES, 
+                  b=[p[0] for p in BIRTH_DEATH_PAIRS], 
+                  d=[p[1] for p in BIRTH_DEATH_PAIRS], 
+                  f=SAMPLING, m=MUTATION, seed=SEEDS, 
+                  model=JATI_MODELS, gap=GAP_STRATEGIES)
+
 rule all:
     input:
-        expand(f"{SIM_DIR}/tree_plot.png", 
-               s=SPECIES, 
-               b=[p[0] for p in BIRTH_DEATH_PAIRS], 
-               d=[p[1] for p in BIRTH_DEATH_PAIRS], 
-               f=SAMPLING, m=MUTATION, seed=SEEDS),
-        expand(f"{INF_DIR}/distances.json", 
-               s=SPECIES, 
-               b=[p[0] for p in BIRTH_DEATH_PAIRS], 
-               d=[p[1] for p in BIRTH_DEATH_PAIRS], 
-               f=SAMPLING, m=MUTATION, seed=SEEDS, 
-               model=JATI_MODELS, gap=GAP_STRATEGIES),
-        expand(f"{INF_DIR}/time.txt", 
-               s=SPECIES, 
-               b=[p[0] for p in BIRTH_DEATH_PAIRS], 
-               d=[p[1] for p in BIRTH_DEATH_PAIRS], 
-               f=SAMPLING, m=MUTATION, seed=SEEDS, 
-               model=JATI_MODELS, gap=GAP_STRATEGIES)
+        "results/summary.tsv"
 
 rule generate_tree:
     output:
@@ -193,3 +186,16 @@ rule calculate_time:
         py_bin = PYTHON
     shell:
         "{params.py_bin} {params.script} {input.log} {output.time_file}"
+
+rule aggregate_summary:
+    input:
+        [f"{d}/distances.json" for d in get_all_inference_dirs()],
+        [f"{d}/time.txt" for d in get_all_inference_dirs()],
+        [f"{d}/logl.out" for d in get_all_inference_dirs()]
+    output:
+        "results/summary.tsv"
+    params:
+        dirs = get_all_inference_dirs(),
+        full_config = config
+    script:
+        "scripts/aggregate_results.py"
