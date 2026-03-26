@@ -8,7 +8,7 @@ SIMULATE_TKF = config["simulate_tkf_path"]
 PYTHON = config["python_bin"]
 JATI = config["jati_path"]
 
-# Extracting parameters
+# PAML evolver Parameters
 SPECIES = config["species"]
 BIRTH_DEATH_PAIRS = config["birth_death_rates"]
 SEEDS = config["seeds"]
@@ -110,22 +110,37 @@ rule jati_inference:
     input:
         msa = "results/msas/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/msa.fasta"
     output:
-        tree = "results/inference/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati/reconstructed_tree.nwk"
+        dir = directory("results/inference/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati_raw")
     params:
         bin = JATI,
         paras = " ".join(map(str, JATI_PARAS)),
-        out_folder = "results/inference/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati"
     shell:
         """
-        mkdir -p {params.out_folder}
+        mkdir -p {output.dir}
         {params.bin} \
-            --out-folder {params.out_folder} \
+            --out-folder {output.dir} \
             --seq-file {input.msa} \
             --model {wildcards.model} \
             --params {params.paras} \
             --gap-handling {wildcards.gap} \
-            --seed {wildcards.seed}
+            --seed {wildcards.seed}         
+        """
+
+rule jati_cleanup:
+    input:
+        dir = "results/inference/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati_raw"
+    output:
+        tree = "results/inference/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati/reconstructed_tree.nwk"
+    params:
+        target_dir = "results/inference/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati"
+    shell:
+        """
+        mkdir -p {params.target_dir}
         
-        # JATI output file name fix if necessary
-        mv {params.out_folder}/*.nwk {output.tree} 2>/dev/null 
+        mv {input.dir}/*/* {params.target_dir}/ 2>/dev/null || true
+            
+        # Remove timestamp prefixes from all files in the target directory
+        find {params.target_dir} -type f -name *_* | while read f; do mv $f ${{f%/*}}/${{f##*_}}             
+
+        mv {params.target_dir}/tree.newick {output.tree}
         """
