@@ -2,6 +2,7 @@ configfile: "config.yaml"
 
 import os
 import glob
+from datetime import datetime
 
 # Path to tools
 EVOLVER = config["evolver_path"]
@@ -39,7 +40,7 @@ rule all:
             for seed in SEEDS
         ],
         [
-            f"results/inference/s{s}_b{pair[0]}_d{pair[1]}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati/final_tree.newick"
+            f"results/inference/s{s}_b{pair[0]}_d{pair[1]}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati/time.txt"
             for s in SPECIES
             for pair in BIRTH_DEATH_PAIRS
             for f in SAMPLING
@@ -163,3 +164,31 @@ rule jati_cleanup:
         mv {params.target_dir}/tree.newick {output.final_tree}
         mv {params.target_dir}/*.log {output.log}
         """
+
+rule calculate_time:
+    input:
+        log = "results/inference/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati/log.txt"
+    output:
+        time_file = "results/inference/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati/time.txt"
+    run:
+        with open(input.log, 'r') as f:
+            lines = f.readlines()
+            if not lines:
+                raise ValueError(f"Log file {input.log} is empty")
+            
+            # First line: 20:38:29 INFO jati JATI run started.
+            first_line = lines[0].strip()
+            # Last line: 20:38:36 INFO jati Final log-likelihood: -939.0035874884918
+            last_line = lines[-1].strip()
+            
+            fmt = "%H:%M:%S"
+            start_time_str = first_line.split(' ')[0]
+            end_time_str = last_line.split(' ')[0]
+            
+            start_dt = datetime.strptime(start_time_str, fmt)
+            end_dt = datetime.strptime(end_time_str, fmt)
+            
+            duration = end_dt - start_dt
+            
+            with open(output.time_file, 'w') as out:
+                out.write(f"{duration.total_seconds()}")
