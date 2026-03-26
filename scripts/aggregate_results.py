@@ -3,6 +3,19 @@ import os
 import re
 import csv
 
+def get_metrics_from_json(dir_path):
+    """
+    Loads all metrics from distances.json if it exists.
+    """
+    dist_path = os.path.join(dir_path, "distances.json")
+    if os.path.exists(dist_path):
+        try:
+            with open(dist_path, 'r') as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {}
+
 def main():
     config = snakemake.params.sn_config
     sim_regex = config["sim_match"]
@@ -25,15 +38,7 @@ def main():
         row.update(global_params)
         
         # 3. Add metrics from files
-        # Distances
-        dist_path = os.path.join(d, "distances.json")
-        if os.path.exists(dist_path):
-            try:
-                with open(dist_path, 'r') as f:
-                    dists = json.load(f)
-                    row.update(dists)
-            except Exception:
-                pass
+        row.update(get_metrics_from_json(d))
 
         # Time
         time_path = os.path.join(d, "time.txt")
