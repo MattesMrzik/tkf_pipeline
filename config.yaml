@@ -13,6 +13,7 @@ evolver_path: "/Users/mrzi/Documents/software/paml4/paml/src/evolver"
 tkf_lambda: 0.1
 tkf_mu: 0.11
 tkf_r: 0.8
+# simulation params need to be added here when the tkf simulation code can accept them
 max_insertion_length: 50
 simulate_tkf_path: "/Users/mrzi/Documents/develop/simulate_tkf/target/debug/simulate_tkf"
 
