@@ -68,6 +68,18 @@ rule all:
         [f"{d}/distances.json" for d in get_all_dirs(INF_PATH)],
         [f"{d}/tree_plot.png" for d in get_all_dirs(MSA_PATH)]
 
+rule simulate_alignments:
+    input:
+        [f"{d}/msa.fasta" for d in get_all_dirs(MSA_PATH)]
+
+rule generate_trees:
+    input:
+        expand(TREE_PATH, 
+               s=SPECIES, 
+               b=[p[0] for p in BIRTH_DEATH_PAIRS], 
+               d=[p[1] for p in BIRTH_DEATH_PAIRS], 
+               f=SAMPLING, m=MUTATION, seed=SEEDS)
+
 rule generate_tree:
     output:
         TREE_PATH
