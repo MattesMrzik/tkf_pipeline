@@ -69,6 +69,9 @@ def main():
 
         if msa_path and os.path.exists(msa_path):
             row["alignment_length"] = get_fasta_length(msa_path)
+            # Create a file:// URL for the MSA file
+            abs_msa_path = os.path.abspath(msa_path)
+            row["msa_file"] = f"file://{abs_msa_path}"
             
             if msa_path not in msa_cache:
                 msa_cache[msa_path] = get_gap_stats(msa_path)
