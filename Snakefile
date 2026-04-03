@@ -24,18 +24,16 @@ MAX_ITERATIONS = config["max_iterations"]
 MSA_SIM_TOOLS = config["msa_sim_tools"]
 
 # Path Templates from config
-TREE_PARAMS_PATH_SNIPPET = config["tree_params_path_snippet"]
-JATI_PATH_SNIPPET = config["jati_path_snippet"]
-TREE_PATH_TEMPLATE = config["tree_path"]
-MSA_DIR_PATH_TEMPLATE = config["msa_dir_path"]
-INF_DIR_PATH_TEMPLATE = config["inf_dir_path"]
+TREE_PATH = config["tree_path"]
+MSA_PATH = config["msa_dir_path"]
+INF_PATH = config["inf_dir_path"]
 
-# Build actual Snakemake paths by replacing placeholder snippets
-# We replace the path snippet placeholders with the actual wildcard strings 
-# so Snakemake can resolve {s}, {b}, etc. later.
-TREE_PATH = TREE_PATH_TEMPLATE.replace("{tree_params_path_snippet}", TREE_PARAMS_PATH_SNIPPET)
-MSA_PATH = MSA_DIR_PATH_TEMPLATE.replace("{tree_params}", TREE_PARAMS_PATH_SNIPPET)
-INF_PATH = INF_DIR_PATH_TEMPLATE.replace("{tree_params}", TREE_PARAMS_PATH_SNIPPET).replace("{jati_path_snippet}", JATI_PATH_SNIPPET)
+# Build actual Snakemake paths
+# We use the raw strings from config. Snakemake will resolve the wildcards 
+# (like {s}, {b}, {msa_sim_tool}) during the DAG construction.
+TREE_PATH = config["tree_path"]
+MSA_PATH = config["msa_dir_path"]
+INF_PATH = config["inf_dir_path"]
 
 # Helper functions for directory expansion
 def get_all_inference_dirs():
