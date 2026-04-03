@@ -32,7 +32,18 @@ TREE_PATH = config["tree_path"].replace("{tree_params_path_snippet}", TREE_PARAM
 MSA_PATH = config["msa_dir_path"].replace("{tree_params_path_snippet}", TREE_PARAMS_PATH_SNIPPET)
 INF_PATH = config["inf_dir_path"].replace("{tree_params_path_snippet}", TREE_PARAMS_PATH_SNIPPET).replace("{jati_path_snippet}", JATI_PATH_SNIPPET)
 
-# Helper functions for directory expansion
+# Helper functions for priority and path generation
+def get_msa_length(wildcards):
+    """Calculates alignment length by reading the second line of the FASTA."""
+   # Since wildcards contains fixed values for a specific job, expand returns a 1-item list
+    msa_path = expand(MSA_PATH + "/msa.fasta", **wildcards)[0]
+    if os.path.exists(msa_path):
+        with open(msa_path, 'r') as f:
+            f.readline() # header
+            seq = f.readline().strip()
+            return len(seq)
+    return 0
+
 def get_all_dirs(template):
     dirs = []
     for tool_name, tool_conf in MSA_SIM_TOOLS.items():
@@ -171,6 +182,8 @@ rule jati_inference:
         final_tree = INF_PATH + "/jati_run_out/jati_run_tree.newick",
         logl = INF_PATH + "/jati_run_out/jati_run_logl.out",
         log = INF_PATH + "/jati_run_out/jati_run.log"
+    priority: 
+        lambda wildcards: (int(wildcards.s) ** 2) * get_msa_length(wildcards)
     params:
         bin = JATI,
         paras = " ".join(map(str, JATI_PARA_LIST)),
