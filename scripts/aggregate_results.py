@@ -45,7 +45,7 @@ def main():
         # Determine MSA path - it is relative to the results directory structure
         # d is results/inference/{tree_params}/{msa_sim_tool}/{tool_params}/{jati_path_snippet}
         # MSA is results/msas/{tree_params}/{msa_sim_tool}/{tool_params}/msa.fasta
-        # So we go up 3 levels from jati_path_snippet to tree_params, then into msas
+        # Tree PNG is results/trees/{tree_params}.nwk.png
         parts = d.split(os.sep)
         # Assuming path starts with 'results/inference/...'
         # We find 'inference' and swap it for 'msas', then remove the last part (jati_path)
@@ -54,8 +54,13 @@ def main():
             msa_parts = list(parts)
             msa_parts[inf_idx] = "msas"
             msa_path = os.sep.join(msa_parts[:-1] + ["msa.fasta"])
+            
+            tree_params = parts[inf_idx + 1]
+            tree_png_path = os.path.join("results", "trees", f"{tree_params}.nwk.png")
+            row["tree_visualization"] = tree_png_path
         except (ValueError, IndexError):
             msa_path = None
+            row["tree_visualization"] = "NA"
 
         row["alignment_length"] = "NA"
         row["gap_percentage"] = "NA"
