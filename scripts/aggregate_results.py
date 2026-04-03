@@ -40,6 +40,7 @@ def main():
         row.update(get_distances_from_json(d))
         row["runtime_seconds"] = get_last_line_value(os.path.join(d, "time.txt"))
         row["log_likelihood"] = get_last_line_value(os.path.join(d, "logl.out"))
+        row["alignment_length"] = get_alignment_length(d)
         
         # Add to collection
         all_rows.append(row)
@@ -65,6 +66,20 @@ def get_distances_from_json(dir_path):
         except Exception:
             pass
     return {}
+
+def get_alignment_length(dir_path):
+    # The MSA is located two levels up from the inference folder: 
+    # results/inference/{tree}/{tool}/{params}/{jati}/
+    # results/msas/{tree}/{tool}/{params}/msa.fasta
+    msa_path = os.path.join(os.path.dirname(dir_path), "msa.fasta")
+    if os.path.exists(msa_path):
+        try:
+            with open(msa_path, 'r') as f:
+                f.readline() # skip header
+                return len(f.readline().strip())
+        except Exception:
+            pass
+    return "NA"
 
 def get_last_line_value(file_path):
     if not os.path.exists(file_path):
