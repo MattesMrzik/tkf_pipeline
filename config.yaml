@@ -1,3 +1,8 @@
+# NOTE on Regex Fields:
+# 'tree_match', 'match_regex', and 'inf_match' are used by scripts/aggregate_results.py
+# to extract metadata (like species count, mutation rates, etc.) directly from 
+# the directory names of the inference outputs into the final summary TSV.
+
 # General
 seeds: [1]
 python_bin: "/Users/mrzi/miniforge3/envs/snakemake/bin/python3"
@@ -18,8 +23,8 @@ msa_dir_path: "results/msas/{tree_params_path_snippet}/{msa_sim_tool}/{tool_para
 msa_sim_tools:
   tkf:
     binary_path: "/Users/mrzi/Documents/develop/simulate_tkf/target/debug/simulate_tkf"
-    lambda: 0.1
-    mu: 0.11
+    lambda: 0.03
+    mu: 0.031
     r: 0.8
     max_ins: 50
     params_path_snipped: "l{lambda}_mu{mu}_r{r}_max{max_ins}"
@@ -28,8 +33,8 @@ msa_sim_tools:
   iqtree:
     binary_path: "/Users/mrzi/Documents/software/iqtree3/iqtree3/build/iqtree3"
     model: "JC"
-    indel_params:
-      - [0.03, 0.1]
+    indel_params: # (insertion_rate, deletion_rate)
+      - [0.01, 0.03]
     params_path_snipped: "ir{ir}_ip{ip}"
     match_regex: 'iqtree/ir(?P<ir>[\d.]+)_ip(?P<ip>[\d.]+)'
 

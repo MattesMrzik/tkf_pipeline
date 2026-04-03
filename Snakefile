@@ -66,7 +66,6 @@ rule all:
     input:
         "results/summary.tsv",
         [f"{d}/distances.json" for d in get_all_dirs(INF_PATH)],
-        [f"{d}/tree_plot.png" for d in get_all_dirs(MSA_PATH)]
 
 rule simulate_alignments:
     input:
@@ -75,6 +74,14 @@ rule simulate_alignments:
 rule generate_trees:
     input:
         expand(TREE_PATH, 
+               s=SPECIES, 
+               b=[p[0] for p in BIRTH_DEATH_PAIRS], 
+               d=[p[1] for p in BIRTH_DEATH_PAIRS], 
+               f=SAMPLING, m=MUTATION, seed=SEEDS)
+
+rule visualize_trees:
+    input:
+        expand(f"{TREE_PATH}.png", 
                s=SPECIES, 
                b=[p[0] for p in BIRTH_DEATH_PAIRS], 
                d=[p[1] for p in BIRTH_DEATH_PAIRS], 
@@ -91,6 +98,17 @@ rule generate_tree:
         printf "2\\n{wildcards.s}\\n1 {wildcards.seed} 1\\n{wildcards.b} {wildcards.d} {wildcards.f} {wildcards.m}\\n0\\n" | {params.evolver} > /dev/null 2>&1
         tail -n 1 evolver.out > {output}
         """
+
+rule visualize_tree:
+    input:
+        tree = TREE_PATH
+    output:
+        plot = f"{TREE_PATH}.png"
+    params:
+        script = "scripts/visualize_trees.py",
+        py_bin = PYTHON
+    shell:
+        "{params.py_bin} {params.script} --tree-file {input.tree} --output-file {output.plot}"
 
 # Helper functions for rule-specific path generation
 def get_msa_output(tool_name):
@@ -144,17 +162,6 @@ rule simulate_iqtree_alignment:
         mv {params.out_dir}/msa.fa {output.msa}
         cp {input.tree} {output.tree_copy}
         """
-
-rule visualize_msa_tree:
-    input:
-        tree = MSA_PATH + "/tree.nwk"
-    output:
-        plot = MSA_PATH + "/tree_plot.png"
-    params:
-        script = "scripts/visualize_trees.py",
-        py_bin = PYTHON
-    shell:
-        "{params.py_bin} {params.script} --tree-file {input.tree} --output-file {output.plot}"
 
 rule jati_inference:
     input:
