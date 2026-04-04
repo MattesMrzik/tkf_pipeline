@@ -224,14 +224,15 @@ rule jati_cleanup:
 rule calculate_distances:
     input:
         true_tree = MSA_PATH + "/tree.nwk",
-        final_tree = INF_PATH + "/final_tree.newick"
+        final_tree = INF_PATH + "/final_tree.newick",
+        start_tree = INF_PATH + "/start_tree.newick"
     output:
         dist_file = INF_PATH + "/distances.json"
     params:
         script = "scripts/calculate_distances.py",
         py_bin = PYTHON
     shell:
-        "{params.py_bin} {params.script} --tree1 {input.true_tree} --tree2 {input.final_tree} --output {output.dist_file}"
+        "{params.py_bin} {params.script} --true-tree {input.true_tree} --final-tree {input.final_tree} --start-tree {input.start_tree} --output {output.dist_file}"
 
 rule calculate_time:
     input:
