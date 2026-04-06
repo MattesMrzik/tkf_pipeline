@@ -2,6 +2,7 @@ import json
 import os
 import re
 import csv
+from utils.summarize_utils import get_tree_params, get_msa_sim_params, get_inference_params
 
 def load_msa_stats(msa_summary_path):
     """Loads MSA stats from the pre-aggregated msa_summary.tsv into a lookup dictionary."""
@@ -15,28 +16,6 @@ def load_msa_stats(msa_summary_path):
         except Exception:
             pass
     return lookup
-
-def get_tree_params(path, tree_regex):
-    match = re.search(tree_regex, path)
-    return match.groupdict() if match else {}
-
-def get_msa_sim_params(path, msa_sim_tools_config):
-    for tool_name, tool_conf in msa_sim_tools_config.items():
-        match = re.search(tool_conf["match_regex"], path)
-        if match:
-            params = {"msa_sim_tool": tool_name}
-            params.update(match.groupdict())
-            return params
-    return {}
-
-def get_inference_params(path, inference_tools_config):
-    for inf_tool_name, inf_conf in inference_tools_config.items():
-        match = re.search(inf_conf["match_regex"], path)
-        if match:
-            params = {"inference_tool": inf_tool_name}
-            params.update(match.groupdict())
-            return params
-    return {}
 
 def get_msa_stats_and_link(path, msa_stats_lookup):
     parts = path.split(os.sep)
@@ -52,8 +31,7 @@ def get_msa_stats_and_link(path, msa_stats_lookup):
         
         # Get MSA stats from lookup table
         stats = msa_stats_lookup.get(msa_dir_path, {})
-        res["msa_len"] = stats.get("msa_len")
-        res["gap%"] = stats.get("gap%")
+        res.update(stats)
         
         # File URL
         abs_msa_path = os.path.abspath(msa_file_path)
@@ -144,8 +122,6 @@ def write_rows_to_tsv(output_path, rows, fieldnames):
         writer = csv.DictWriter(f, fieldnames=fieldnames, delimiter='\t', extrasaction='ignore', restval='NA')
         writer.writeheader()
         writer.writerows(rows)
-
-
 
 if __name__ == "__main__":
     main()
