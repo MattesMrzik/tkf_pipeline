@@ -39,11 +39,11 @@ def get_all_dirs(template):
             param_sets = [tool_conf["params_path_snipped"].format(**{
                 "lambda": tool_conf["lambda"], "mu": tool_conf["mu"], 
                 "r": tool_conf["r"], "max_ins": tool_conf["max_ins"],
-                "root_length": tool_conf["root_length"]
-            })]
+                "root_length": rl
+            }) for rl in tool_conf["root_lengths"]]
         elif tool_name == "alisim":
-            param_sets = [tool_conf["params_path_snipped"].format(ir=p[0], ip=p[1], root_length=tool_conf["root_length"]) 
-                         for p in tool_conf["indel_params"]]
+            param_sets = [tool_conf["params_path_snipped"].format(ir=p[0], ip=p[1], root_length=rl) 
+                         for p in tool_conf["indel_params"] for rl in tool_conf["root_lengths"]]
         
         for inf_tool_name, inf_conf in INF_TOOLS.items():
             # Build inference parameters
