@@ -240,7 +240,7 @@ rule iqtree_inference:
     shell:
         """
         mkdir -p {params.out_dir}
-        {params.bin} -s {input.msa} -m {wildcards.model} --prefix {params.out_dir}/iqtree -nt AUTO --seed {wildcards.seed}
+        {params.bin} -s {input.msa} -m {wildcards.model} --prefix {params.out_dir}/iqtree -nt 1 --seed {wildcards.seed}
         mv {params.out_dir}/iqtree.treefile {output.final_tree}
         mv {params.out_dir}/iqtree.log {output.log}
         grep "Optimal log-likelihood:" {output.log} | sed 's/.*: //' > {output.logl}
