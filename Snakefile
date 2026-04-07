@@ -82,6 +82,10 @@ def get_all_dirs(template):
                                              model=inf_conf["models"], 
                                              gap=[gap],
                                              move_strategy=[move]))
+            elif inf_tool_name == "true_tree":
+                inf_params = expand(inf_conf["path_snippet"], 
+                                   model=inf_conf["models"],
+                                   gap=inf_conf["gap_strategies"])
             elif inf_tool_name == "iqtree":
                 inf_params = expand(inf_conf["path_snippet"], 
                                     model=inf_conf["models"])
@@ -212,6 +216,52 @@ rule simulate_alisim_alignment:
             --no-unaligned 
         mv {params.out_dir}/msa.fa {output.msa}
         cp {input.tree} {output.tree_copy}
+        """
+
+rule true_tree_inference:
+    input:
+        msa = MSA_PATH + "/msa.fasta",
+        tree = MSA_PATH + "/tree.nwk"
+    output:
+        final_tree = get_inf_output("true_tree") + "/jati_run_out/jati_run_tree.newick",
+        logl = get_inf_output("true_tree") + "/jati_run_out/jati_run_logl.out",
+        log = get_inf_output("true_tree") + "/jati_run_out/jati_run.log"
+    params:
+        bin = INF_TOOLS["true_tree"]["binary_path"],
+        epsilon = INF_TOOLS["true_tree"]["epsilon"],
+        paras = " ".join(map(str, INF_TOOLS["true_tree"]["params"])),
+        log_level = "warn",
+        out_base = get_inf_output("true_tree")
+    shell:
+        """
+        mkdir -p {params.out_base}
+        {params.bin} \
+            --out-folder {params.out_base} \
+            --seq-file {input.msa} \
+            --tree-file {input.tree} \
+            --model {wildcards.model} \
+            --params {params.paras} \
+            --gap-handling {wildcards.gap} \
+            --epsilon {params.epsilon} \
+            --seed {wildcards.seed} \
+            -l {params.log_level} \
+            --no-timestamp
+        """
+
+rule true_tree_cleanup:
+    input:
+        final_tree = get_inf_output("true_tree") + "/jati_run_out/jati_run_tree.newick",
+        logl = get_inf_output("true_tree") + "/jati_run_out/jati_run_logl.out",
+        log = get_inf_output("true_tree") + "/jati_run_out/jati_run.log"
+    output:
+        final_tree = get_inf_output("true_tree") + "/final_tree.newick",
+        logl = get_inf_output("true_tree") + "/logl.out",
+        log = get_inf_output("true_tree") + "/log.txt"
+    shell:
+        """
+        mv {input.final_tree} {output.final_tree}
+        mv {input.logl} {output.logl}
+        mv {input.log} {output.log}
         """
 
 rule jati_inference:

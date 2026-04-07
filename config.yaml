@@ -44,10 +44,18 @@ msa_sim_tools:
 
 # Inference Tools & Their Parameters
 inference_tools:
+  true_tree:
+    binary_path: "/Users/mrzi/Documents/develop/model_search_phylo/target/release/model-search-phylo"
+    models: ["jc69"]
+    gap_strategies: ["PIP", "TKF92"]
+    epsilon: 1e-5
+    params: [0.03, 0.04, 0.5]
+    path_snippet: "{model}_{gap}"
+    match_regex: 'true_tree/(?P<model>[^/]+)_(?P<gap_strategy>[^/]+)'
   jati:
     binary_path: "/Users/mrzi/Documents/develop/jati_tkf/JATI/target/debug/jati"
     models: ["jc69"]
-    params: [0.3, 0.4, 0.5]
+    params: [0.03, 0.04, 0.5]
     gap_move:
       - ["PIP", "NNI"]
       - ["PIP", "SPR"]
