@@ -1,15 +1,35 @@
+# config.yaml (Environment-aware version)
+
+# Use 'env: local' or 'env: hpc' to toggle between profiles
+env: local
+
+environments:
+  local:
+    python_bin: "/Users/mrzi/miniforge3/envs/snakemake/bin/python3"
+    python_module: "" # Not needed locally
+    evolver: "/Users/mrzi/Documents/software/paml4/paml/src/evolver"
+    simulate_tkf: "/Users/mrzi/Documents/develop/simulate_tkf/target/debug/simulate_tkf"
+    iqtree3: "/Users/mrzi/Documents/software/iqtree3/iqtree3/build/iqtree3"
+    model_search_phylo: "/Users/mrzi/Documents/develop/model_search_phylo/target/release/model-search-phylo"
+    jati: "/Users/mrzi/Documents/develop/jati_tkf/JATI/target/debug/jati"
+  hpc:
+    # Placeholders for cluster paths - update these on the HPC
+    python_bin: "python3" # Will use 'module load python' or conda env
+    python_module: "python/3.9.12-pe5.34"
+    evolver: "/cfs/earth/scratch/USER/software/paml4/paml/src/evolver"
+    simulate_tkf: "/cfs/earth/scratch/USER/develop/simulate_tkf/target/release/simulate_tkf"
+    iqtree3: "/cfs/earth/scratch/USER/software/iqtree3/iqtree3/build/iqtree3"
+    model_search_phylo: "/cfs/earth/scratch/USER/develop/model_search_phylo/target/release/model-search-phylo"
+    jati: "/cfs/earth/scratch/USER/develop/jati_tkf/JATI/target/release/jati"
+
 # NOTE on Regex Fields:
 # 'tree_match', 'match_regex', and 'inf_match' are used by scripts/aggregate_results.py
-# to extract metadata (like species count, mutation rates, etc.) directly from 
-# the directory names of the inference outputs into the final summary TSV.
+# to extract metadata directly from directory names.
 
 # General
 seeds: [1]
-python_bin: "/Users/mrzi/miniforge3/envs/snakemake/bin/python3"
 
 # PAML Tree Generation Parameters
-evolver_path: "/Users/mrzi/Documents/software/paml4/paml/src/evolver"
-# species: [128, 64, 32, 16]
 species: [8,16]
 birth_death_rates:
   - [1.0, 2.0]
@@ -23,21 +43,18 @@ tree_match: 's(?P<species>\d+)_b(?P<birth_rate>[\d.]+)_d(?P<death_rate>[\d.]+)_f
 msa_dir_path: "results/msas/{tree_params_path_snippet}/{msa_sim_tool}/{tool_params}"
 msa_sim_tools:
   tkf:
-    binary_path: "/Users/mrzi/Documents/develop/simulate_tkf/target/debug/simulate_tkf"
     lambda: 0.03
     mu: 0.0303
     r: 0.8
     max_ins: 50
-    root_lengths: [500] # we choose params above to get expected 500 length at the root
+    root_lengths: [500]
     params_path_snipped: "l{lambda}_mu{mu}_r{r}_max{max_ins}_len{root_length}"
     match_regex: 'tkf/l(?P<tkf_lambda>[\d.]+)_mu(?P<tkf_mu>[\d.]+)_r(?P<tkf_r>[\d.]+)_max(?P<max_ins>\d+)_len(?P<root_length>\d+)'
   
   alisim:
-    binary_path: "/Users/mrzi/Documents/software/iqtree3/iqtree3/build/iqtree3"
     model: "JC"
     root_lengths: [500]
     indel_params: # (insertion_rate, deletion_rate)
-    # For simulations with indels, we applied empirical parameters (Graur et al. 1989; Gu and Li 1995; Cartwright 2009) with the insertion and deletion rates of 0.03 and 0.09, respectively, and the indel-lengths drawn from a truncated Zipfian (Power-Law) distribution (Fletcher and Yang 2009) (a = 1.7; max = 100). alisim paper and these seem to be also the default params for alisim
       - [0.006, 0.018]
     params_path_snipped: "ir{ir}_ip{ip}_len{root_length}"
     match_regex: 'alisim/ir(?P<ir>[\d.]+)_ip(?P<ip>[\d.]+)_len(?P<root_length>\d+)'
@@ -45,7 +62,6 @@ msa_sim_tools:
 # Inference Tools & Their Parameters
 inference_tools:
   true_tree:
-    binary_path: "/Users/mrzi/Documents/develop/model_search_phylo/target/release/model-search-phylo"
     models: ["jc69"]
     gap_strategies: ["PIP", "TKF92"]
     epsilon: 1e-5
@@ -53,22 +69,18 @@ inference_tools:
     path_snippet: "{model}_{gap}"
     match_regex: 'true_tree/(?P<model>[^/]+)_(?P<gap_strategy>[^/]+)'
   jati:
-    binary_path: "/Users/mrzi/Documents/develop/jati_tkf/JATI/target/debug/jati"
     models: ["jc69"]
     params: [0.03, 0.04, 0.5]
     gap_move:
       - ["PIP", "NNI"]
       - ["PIP", "SPR"]
       - ["TKF92", "NNI"]
-      # - ["TKF91", "NNI"]
     max_iterations: 5
     path_snippet: "{model}_{gap}_{move_strategy}"
     match_regex: 'jati/(?P<model>[^/]+)_(?P<gap_strategy>[^/]+)_(?P<move_strategy>[^/]+)'
   iqtree:
-    binary_path: "/Users/mrzi/Documents/software/iqtree3/iqtree3/build/iqtree3"
     models: ["JC"]
     path_snippet: "{model}"
     match_regex: 'iqtree/(?P<model>[^/]+)'
 
 inf_dir_path: "results/inference/{tree_params_path_snippet}/{msa_sim_tool}/{tool_params}/{inference_tool}/{inf_params}"
-

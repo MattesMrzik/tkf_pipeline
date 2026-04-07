@@ -1,0 +1,7 @@
+# profiles/local/config.yaml
+jobs: 8 
+default-resources:
+  - threads=8
+  - mem_mb=4096
+config:
+  env: "local"

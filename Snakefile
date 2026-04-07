@@ -2,15 +2,21 @@ configfile: "config.yaml"
 
 import os
 
-# Remove obsolete helper if it exists
-try:
-    from scripts.utils.snakemake_helpers import get_msa_length
-except ImportError:
-    pass
+# Select environment based on config (set by profile)
+ENV = config.get("env", "local")
+PATHS = config["environments"][ENV]
 
-# Path to common tools
-EVOLVER = config["evolver_path"]
-PYTHON = config["python_bin"]
+# Tool Paths from environment-specific config
+EVOLVER = PATHS["evolver"]
+PYTHON = PATHS["python_bin"]
+PYTHON_MODULE = PATHS.get("python_module", "")
+SIMULATE_TKF = PATHS["simulate_tkf"]
+IQTREE3 = PATHS["iqtree3"]
+MODEL_SEARCH_PHYLO = PATHS["model_search_phylo"]
+JATI = PATHS["jati"]
+
+# Helper to load python module on HPC
+LOAD_PYTHON = f"module load {PYTHON_MODULE}; " if ENV == "hpc" and PYTHON_MODULE else ""
 
 # Tree Generation Parameters
 SPECIES = config["species"]
@@ -24,7 +30,6 @@ INF_TOOLS = config["inference_tools"]
 MSA_SIM_TOOLS = config["msa_sim_tools"]
 
 # Path Templates from config
-# Resolve the tree_params once so they're available to all paths
 TREE_PARAMS_PATH_SNIPPET = config["tree_params_path_snippet"]
 
 TREE_PATH = config["tree_path"].replace("{tree_params_path_snippet}", TREE_PARAMS_PATH_SNIPPET)
@@ -62,7 +67,6 @@ def get_all_msa_dirs():
 def get_all_dirs(template):
     dirs = []
     for tool_name, tool_conf in MSA_SIM_TOOLS.items():
-        # Get all parameter combinations for this tool
         if tool_name == "tkf":
             param_sets = [tool_conf["params_path_snipped"].format(**{
                 "lambda": tool_conf["lambda"], "mu": tool_conf["mu"], 
@@ -74,7 +78,6 @@ def get_all_dirs(template):
                          for p in tool_conf["indel_params"] for rl in tool_conf["root_lengths"]]
         
         for inf_tool_name, inf_conf in INF_TOOLS.items():
-            # Build inference parameters
             if inf_tool_name == "jati":
                 inf_params = []
                 for gap, move in inf_conf["gap_move"]:
@@ -90,7 +93,6 @@ def get_all_dirs(template):
                 inf_params = expand(inf_conf["path_snippet"], 
                                     model=inf_conf["models"])
 
-            # Expand template with tree wildcards, tool-specific params, and inference params
             exp_dict = {
                 "msa_sim_tool": [tool_name],
                 "tool_params": param_sets,
@@ -100,7 +102,6 @@ def get_all_dirs(template):
                 "d": [p[1] for p in BIRTH_DEATH_PAIRS], 
                 "f": SAMPLING, "m": MUTATION, "seed": SEEDS
             }
-            
             dirs.extend(expand(template, **exp_dict))
     return dirs
 
@@ -108,7 +109,6 @@ rule all:
     input:
         "results/summary.tsv",
         "results/msa_summary.tsv",
-        "/Users/mrzi/Seafile/phd_obsidian/notes/pipeline_out/summary_table.md",
         [f"{d}/distances.json" for d in get_all_dirs(INF_PATH)],
 
 rule simulate_alignments:
@@ -134,12 +134,12 @@ rule visualize_trees:
 rule generate_tree:
     output:
         TREE_PATH
-    params:
-        evolver = EVOLVER
-    shadow: "minimal"
+    threads: 1
+    resources:
+        mem_mb=1024
     shell:
         """
-        printf "2\\n{wildcards.s}\\n1 {wildcards.seed} 1\\n{wildcards.b} {wildcards.d} {wildcards.f} {wildcards.m}\\n0\\n" | {params.evolver} > /dev/null 2>&1
+        printf "2\\n{wildcards.s}\\n1 {wildcards.seed} 1\\n{wildcards.b} {wildcards.d} {wildcards.f} {wildcards.m}\\n0\\n" | {EVOLVER} > /dev/null 2>&1
         tail -n 1 evolver.out > {output}
         """
 
@@ -148,22 +148,23 @@ rule visualize_tree:
         tree = TREE_PATH
     output:
         plot = f"{TREE_PATH}.png"
-    params:
-        script = "scripts/visualize_trees.py",
-        py_bin = PYTHON
+    threads: 1
+    resources:
+        mem_mb=2048
     shell:
-        "{params.py_bin} {params.script} --tree-file {input.tree} --output-file {output.plot}"
+        """
+        {LOAD_PYTHON}
+        {PYTHON} scripts/visualize_trees.py --tree-file {input.tree} --output-file {output.plot}
+        """
 
 # Helper functions for rule-specific path generation
 def get_msa_output(tool_name):
-    """Returns the tool-specific MSA directory template."""
     tool_conf = MSA_SIM_TOOLS[tool_name]
     return MSA_PATH.replace("{msa_sim_tool}", tool_name).replace(
         "{tool_params}", tool_conf["params_path_snipped"]
     )
 
 def get_inf_output(tool_name):
-    """Returns the tool-specific inference directory template."""
     tool_conf = INF_TOOLS[tool_name]
     return INF_PATH.replace("{inference_tool}", tool_name).replace(
         "{inf_params}", tool_conf["path_snippet"]
@@ -175,12 +176,12 @@ rule simulate_tkf_alignment:
     output:
         msa = get_msa_output("tkf") + "/msa.fasta",
         tree_copy = get_msa_output("tkf") + "/tree.nwk"
-    params:
-        bin = MSA_SIM_TOOLS["tkf"]["binary_path"],
-        out_dir = lambda wildcards, output: os.path.dirname(output.msa)
+    threads: 1
+    resources:
+        mem_mb=4096
     shell:
         """
-        {params.bin} \
+        {SIMULATE_TKF} \
             --tree-file {input.tree} \
             --lambda {wildcards.lambda} \
             --mu {wildcards.mu} \
@@ -188,7 +189,7 @@ rule simulate_tkf_alignment:
             --max-insertion-length {wildcards.max_ins} \
             --root-length {wildcards.root_length} \
             --seed {wildcards.seed} \
-            --output-dir {params.out_dir}
+            --output-dir $(dirname {output.msa})
         cp {input.tree} {output.tree_copy}
         """
 
@@ -198,23 +199,22 @@ rule simulate_alisim_alignment:
     output:
         msa = get_msa_output("alisim") + "/msa.fasta",
         tree_copy = get_msa_output("alisim") + "/tree.nwk"
-    params:
-        bin = MSA_SIM_TOOLS["alisim"]["binary_path"],
-        model = MSA_SIM_TOOLS["alisim"]["model"],
-        out_dir = lambda wildcards, output: os.path.dirname(output.msa)
+    threads: 1
+    resources:
+        mem_mb=1024
     shell:
         """
-        mkdir -p {params.out_dir}
-        {params.bin} \
-            --alisim {params.out_dir}/msa \
-            -m {params.model} \
+        mkdir -p $(dirname {output.msa})
+        {IQTREE3} \
+            --alisim $(dirname {output.msa})/msa \
+            -m {MSA_SIM_TOOLS[alisim][model]} \
             -t {input.tree} \
             --indel {wildcards.ir},{wildcards.ip} \
             --length {wildcards.root_length} \
             --seed {wildcards.seed} \
             --out-format fasta \
             --no-unaligned 
-        mv {params.out_dir}/msa.fa {output.msa}
+        mv $(dirname {output.msa})/msa.fa {output.msa}
         cp {input.tree} {output.tree_copy}
         """
 
@@ -223,19 +223,20 @@ rule true_tree_inference:
         msa = MSA_PATH + "/msa.fasta",
         tree = MSA_PATH + "/tree.nwk"
     output:
-        final_tree = get_inf_output("true_tree") + "/jati_run_out/jati_run_tree.newick",
-        logl = get_inf_output("true_tree") + "/jati_run_out/jati_run_logl.out",
-        log = get_inf_output("true_tree") + "/jati_run_out/jati_run.log"
+        final_tree = get_inf_output("true_tree") + "/final_tree.newick",
+        logl = get_inf_output("true_tree") + "/logl.out",
+        log = get_inf_output("true_tree") + "/log.txt"
+    threads: 1
+    resources:
+        mem_mb=4096
     params:
-        bin = INF_TOOLS["true_tree"]["binary_path"],
         epsilon = INF_TOOLS["true_tree"]["epsilon"],
         paras = " ".join(map(str, INF_TOOLS["true_tree"]["params"])),
-        log_level = "warn",
         out_base = get_inf_output("true_tree")
     shell:
         """
         mkdir -p {params.out_base}
-        {params.bin} \
+        {MODEL_SEARCH_PHYLO} \
             --out-folder {params.out_base} \
             --seq-file {input.msa} \
             --tree-file {input.tree} \
@@ -244,45 +245,32 @@ rule true_tree_inference:
             --gap-handling {wildcards.gap} \
             --epsilon {params.epsilon} \
             --seed {wildcards.seed} \
-            -l {params.log_level} \
-            --no-timestamp
-        """
-
-rule true_tree_cleanup:
-    input:
-        final_tree = get_inf_output("true_tree") + "/jati_run_out/jati_run_tree.newick",
-        logl = get_inf_output("true_tree") + "/jati_run_out/jati_run_logl.out",
-        log = get_inf_output("true_tree") + "/jati_run_out/jati_run.log"
-    output:
-        final_tree = get_inf_output("true_tree") + "/final_tree.newick",
-        logl = get_inf_output("true_tree") + "/logl.out",
-        log = get_inf_output("true_tree") + "/log.txt"
-    shell:
-        """
-        mv {input.final_tree} {output.final_tree}
-        mv {input.logl} {output.logl}
-        mv {input.log} {output.log}
+            -l warn --no-timestamp
+        mv {params.out_base}/jati_run_out/jati_run_tree.newick {output.final_tree}
+        mv {params.out_base}/jati_run_out/jati_run_logl.out {output.logl}
+        mv {params.out_base}/jati_run_out/jati_run.log {output.log}
         """
 
 rule jati_inference:
     input:
         msa = MSA_PATH + "/msa.fasta"
     output:
-        start_tree = get_inf_output("jati") + "/jati_run_out/jati_run_start_tree.newick",
-        final_tree = get_inf_output("jati") + "/jati_run_out/jati_run_tree.newick",
-        logl = get_inf_output("jati") + "/jati_run_out/jati_run_logl.out",
-        log = get_inf_output("jati") + "/jati_run_out/jati_run.log"
+        start_tree = get_inf_output("jati") + "/start_tree.newick",
+        final_tree = get_inf_output("jati") + "/final_tree.newick",
+        logl = get_inf_output("jati") + "/logl.out",
+        log = get_inf_output("jati") + "/log.txt"
+    threads: 1
+    resources:
+        mem_mb=4096
     params:
-        bin = INF_TOOLS["jati"]["binary_path"],
         paras = " ".join(map(str, INF_TOOLS["jati"]["params"])),
-        log_level = "warn",
         max_iterations = INF_TOOLS["jati"]["max_iterations"],
         out_base = get_inf_output("jati"),
         force_nni = lambda wildcards: "--force-nni" if wildcards.move_strategy == "NNI" else ""
     shell:
         """
         mkdir -p {params.out_base}
-        {params.bin} \
+        {JATI} \
             --out-folder {params.out_base} \
             --seq-file {input.msa} \
             --model {wildcards.model} \
@@ -290,28 +278,13 @@ rule jati_inference:
             --gap-handling {wildcards.gap} \
             {params.force_nni} \
             --seed {wildcards.seed} \
-            -l {params.log_level} \
+            -l warn \
             --max-iterations {params.max_iterations} \
             --no-timestamp
-        """
-
-rule jati_cleanup:
-    input:
-        start_tree = get_inf_output("jati") + "/jati_run_out/jati_run_start_tree.newick",
-        final_tree = get_inf_output("jati") + "/jati_run_out/jati_run_tree.newick",
-        logl = get_inf_output("jati") + "/jati_run_out/jati_run_logl.out",
-        log = get_inf_output("jati") + "/jati_run_out/jati_run.log"
-    output:
-        start_tree = get_inf_output("jati") + "/start_tree.newick",
-        final_tree = get_inf_output("jati") + "/final_tree.newick",
-        logl = get_inf_output("jati") + "/logl.out",
-        log = get_inf_output("jati") + "/log.txt"
-    shell:
-        """
-        mv {input.start_tree} {output.start_tree}
-        mv {input.final_tree} {output.final_tree}
-        mv {input.logl} {output.logl}
-        mv {input.log} {output.log}
+        mv {params.out_base}/jati_run_out/jati_run_start_tree.newick {output.start_tree}
+        mv {params.out_base}/jati_run_out/jati_run_tree.newick {output.final_tree}
+        mv {params.out_base}/jati_run_out/jati_run_logl.out {output.logl}
+        mv {params.out_base}/jati_run_out/jati_run.log {output.log}
         """
 
 rule iqtree_inference:
@@ -321,34 +294,33 @@ rule iqtree_inference:
         final_tree = get_inf_output("iqtree") + "/final_tree.newick",
         log = get_inf_output("iqtree") + "/log.txt",
         logl = get_inf_output("iqtree") + "/logl.out"
-    params:
-        bin = INF_TOOLS["iqtree"]["binary_path"],
-        out_dir = lambda wildcards, output: os.path.dirname(output.final_tree),
+    threads: 1
+    resources:
+        mem_mb=4096
     shell:
         """
-        mkdir -p {params.out_dir}
-        {params.bin} -s {input.msa} -m {wildcards.model} --prefix {params.out_dir}/iqtree -nt 1 --seed {wildcards.seed}
-        mv {params.out_dir}/iqtree.treefile {output.final_tree}
-        mv {params.out_dir}/iqtree.log {output.log}
+        mkdir -p $(dirname {output.final_tree})
+        {IQTREE3} -s {input.msa} -m {wildcards.model} --prefix $(dirname {output.final_tree})/iqtree -nt 1 --seed {wildcards.seed}
+        mv $(dirname {output.final_tree})/iqtree.treefile {output.final_tree}
+        mv $(dirname {output.final_tree})/iqtree.log {output.log}
         grep "Optimal log-likelihood:" {output.log} | sed 's/.*: //' > {output.logl}
         """
 
 rule calculate_distances:
     input:
         true_tree = MSA_PATH + "/tree.nwk",
-        final_tree = INF_PATH + "/final_tree.newick",
+        final_tree = INF_PATH + "/final_tree.newick"
     output:
         dist_file = INF_PATH + "/distances.json"
-    params:
-        script = "scripts/calculate_distances.py",
-        py_bin = PYTHON,
-        start_tree = lambda wildcards, input: os.path.join(os.path.dirname(input.final_tree), "start_tree.newick")
+    threads: 1
+    resources:
+        mem_mb=1024
     shell:
         """
-        CMD="{params.py_bin} {params.script} --true-tree {input.true_tree} --final-tree {input.final_tree} --output {output.dist_file}"
-        if [ -f "{params.start_tree}" ]; then
-            CMD="$CMD --start-tree {params.start_tree}"
-        fi
+        {LOAD_PYTHON}
+        START_TREE=$(dirname {input.final_tree})/start_tree.newick
+        CMD="{PYTHON} scripts/calculate_distances.py --true-tree {input.true_tree} --final-tree {input.final_tree} --output {output.dist_file}"
+        if [ -f "$START_TREE" ]; then CMD="$CMD --start-tree $START_TREE"; fi
         $CMD
         """
 
@@ -357,17 +329,23 @@ rule calculate_time:
         log = INF_PATH + "/log.txt"
     output:
         time_file = INF_PATH + "/time.txt"
-    params:
-        script = "scripts/calculate_time.py",
-        py_bin = PYTHON
+    threads: 1
+    resources:
+        mem_mb=512
     shell:
-        "{params.py_bin} {params.script} {input.log} {output.time_file}"
+        """
+        {LOAD_PYTHON}
+        {PYTHON} scripts/calculate_time.py {input.log} {output.time_file}
+        """
 
 rule summarize_msas:
     input:
         [f"{d}/msa.fasta" for d in get_all_msa_dirs()]
     output:
         tsv_path = "results/msa_summary.tsv"
+    threads: 1
+    resources:
+        mem_mb=2048
     params:
         msa_dirs = get_all_msa_dirs(),
         sn_config = config
@@ -382,6 +360,9 @@ rule summarize_results:
         logl_files = [f"{d}/logl.out" for d in get_all_dirs(INF_PATH)]
     output:
         tsv_path = "results/summary.tsv"
+    threads: 1
+    resources:
+        mem_mb=2048
     params:
         dirs = get_all_dirs(INF_PATH),
         sn_config = config
@@ -393,8 +374,11 @@ rule summary_to_obsidian:
         tsv = "results/summary.tsv"
     output:
         md = "/Users/mrzi/Seafile/phd_obsidian/notes/pipeline_out/summary_table.md"
-    params:
-        script = "scripts/tsv_to_md.py",
-        py_bin = PYTHON
+    threads: 1
+    resources:
+        mem_mb=512
     shell:
-        "{params.py_bin} {params.script} {input.tsv} {output.md}"
+        """
+        {LOAD_PYTHON}
+        {PYTHON} scripts/tsv_to_md.py {input.tsv} {output.md}
+        """
