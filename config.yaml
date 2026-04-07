@@ -10,7 +10,7 @@ python_bin: "/Users/mrzi/miniforge3/envs/snakemake/bin/python3"
 # PAML Tree Generation Parameters
 evolver_path: "/Users/mrzi/Documents/software/paml4/paml/src/evolver"
 # species: [128, 64, 32, 16]
-species: [8, 16, 32, 64]
+species: [8,16]
 birth_death_rates:
   - [1.0, 2.0]
 sampling_fraction: [0.25]
@@ -48,10 +48,14 @@ inference_tools:
     binary_path: "/Users/mrzi/Documents/develop/jati_tkf/JATI/target/debug/jati"
     models: ["jc69"]
     params: [0.3, 0.4, 0.5]
-    gap_strategies: ["PIP", "TKF92"]
+    gap_move:
+      - ["PIP", "NNI"]
+      - ["PIP", "SPR"]
+      - ["TKF92", "NNI"]
+      # - ["TKF91", "NNI"]
     max_iterations: 5
-    path_snippet: "{model}_{gap}"
-    match_regex: 'jati/(?P<model>[^/]+)_(?P<gap_strategy>[^/]+)'
+    path_snippet: "{model}_{gap}_{move_strategy}"
+    match_regex: 'jati/(?P<model>[^/]+)_(?P<gap_strategy>[^/]+)_(?P<move_strategy>[^/]+)'
   iqtree:
     binary_path: "/Users/mrzi/Documents/software/iqtree3/iqtree3/build/iqtree3"
     models: ["JC"]

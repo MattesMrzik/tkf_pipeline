@@ -76,9 +76,12 @@ def get_all_dirs(template):
         for inf_tool_name, inf_conf in INF_TOOLS.items():
             # Build inference parameters
             if inf_tool_name == "jati":
-                inf_params = expand(inf_conf["path_snippet"], 
-                                    model=inf_conf["models"], 
-                                    gap=inf_conf["gap_strategies"])
+                inf_params = []
+                for gap, move in inf_conf["gap_move"]:
+                    inf_params.extend(expand(inf_conf["path_snippet"], 
+                                             model=inf_conf["models"], 
+                                             gap=[gap],
+                                             move_strategy=[move]))
             elif inf_tool_name == "iqtree":
                 inf_params = expand(inf_conf["path_snippet"], 
                                     model=inf_conf["models"])
@@ -224,7 +227,8 @@ rule jati_inference:
         paras = " ".join(map(str, INF_TOOLS["jati"]["params"])),
         log_level = "warn",
         max_iterations = INF_TOOLS["jati"]["max_iterations"],
-        out_base = get_inf_output("jati")
+        out_base = get_inf_output("jati"),
+        force_nni = lambda wildcards: "--force-nni" if wildcards.move_strategy == "NNI" else ""
     shell:
         """
         mkdir -p {params.out_base}
@@ -234,6 +238,7 @@ rule jati_inference:
             --model {wildcards.model} \
             --params {params.paras} \
             --gap-handling {wildcards.gap} \
+            {params.force_nni} \
             --seed {wildcards.seed} \
             -l {params.log_level} \
             --max-iterations {params.max_iterations} \

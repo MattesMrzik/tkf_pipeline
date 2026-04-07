@@ -104,7 +104,7 @@ def main():
         # MSA Simulation
         "msa_sim_tool", "root_length", "tkf_lambda", "tkf_mu", "tkf_r", "max_ins", "ir", "ip", "msa_len", "gap%", "gap_col%", "avg_gap_len", "msa",
         # Inference
-        "inference_tool", "model", "gap_strategy", "logl", "runtime_seconds",
+        "inference_tool", "model", "gap_strategy", "move_strategy", "logl", "runtime_seconds",
         # Results/Metrics
         "rf", "kf", "start_rf", "start_kf",
     ]
