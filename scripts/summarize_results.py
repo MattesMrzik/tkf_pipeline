@@ -73,6 +73,33 @@ def get_last_line_value(file_path):
         pass
     return "NA"
 
+def get_true_tree_logl(dir_path, row):
+    """
+    Looks up the optimized log-likelihood of the true tree for the given run's parameters.
+    """
+    if row.get("inference_tool") == "true_tree":
+        return row.get("logl", "NA")
+
+    model = row.get("model")
+    gap = row.get("gap_strategy")
+    if not (model and gap):
+        return "NA"
+
+    # Construct the path to the true tree inference directory
+    # Template: results/inference/{tree_params}/{msa_tool}/{tool_params}/true_tree/{model}_{gap}
+    parts = dir_path.split(os.sep)
+    try:
+        inf_idx = parts.index("inference")
+        # dir_path is likely .../inference/{tree_params}/{msa_tool}/{tool_params}/{inf_tool}/{inf_params}
+        # We need the first 4 parts after 'inference' to reach tool_params
+        true_tree_parts = parts[:inf_idx+4]
+        true_tree_parts.append("true_tree")
+        true_tree_parts.append(f"{model}_{gap}")
+        true_tree_dir = os.sep.join(true_tree_parts)
+        return get_last_line_value(os.path.join(true_tree_dir, "logl.out"))
+    except (ValueError, IndexError):
+        return "NA"
+
 def main():
     config = snakemake.params.sn_config
     msa_stats_lookup = load_msa_stats(snakemake.input.msa_summary)
@@ -91,6 +118,7 @@ def main():
         row.update(get_distances_from_json(d))
         row["runtime_seconds"] = get_last_line_value(os.path.join(d, "time.txt"))
         row["logl"] = get_last_line_value(os.path.join(d, "logl.out"))
+        row["true_tree_logl"] = get_true_tree_logl(d, row)
 
         # Add to collection
         all_rows.append(row)
@@ -104,7 +132,7 @@ def main():
         # MSA Simulation
         "msa_sim_tool", "root_length", "tkf_lambda", "tkf_mu", "tkf_r", "max_ins", "ir", "ip", "msa_len", "gap%", "gap_col%", "avg_gap_len", "msa",
         # Inference
-        "inference_tool", "model", "gap_strategy", "move_strategy", "logl", "runtime_seconds",
+        "inference_tool", "model", "gap_strategy", "move_strategy", "logl", "true_tree_logl", "runtime_seconds",
         # Results/Metrics
         "rf", "kf", "start_rf", "start_kf",
     ]
