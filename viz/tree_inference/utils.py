@@ -19,7 +19,7 @@ def all_inf_dirs(base_dir = os.path.join(project_root, RESULTS_INF_DIR)):
 
 def get_tree_inference_params(path, inference_tools_config):
     for inf_tool_name, inf_conf in inference_tools_config.items():
-        match = re.search(inf_conf["match_regex"], path)
+        match = re.search(f'{inf_tool_name}/{inf_conf["match_regex"]}', path)
         if match:
             params = {"inference_tool": inf_tool_name}
             params.update(match.groupdict())

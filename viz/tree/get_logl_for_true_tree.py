@@ -11,7 +11,7 @@ def get_true_tree_logl(inf_dir, row):
     if row.get("inference_tool") == "true_tree":
         return row.get("logl", "NA")
     model = row.get("model")
-    gap = row.get("gap_strategy")
+    gap = row.get("gap")
     if not (model and gap):
         return "NA"
     parts = inf_dir.split(os.sep)

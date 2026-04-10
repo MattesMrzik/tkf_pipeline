@@ -33,14 +33,23 @@ seeds: [1]
 tree_path: "results/{seed}/trees/{tree_sim_tool}/{tree_params}.nwk"
 tree_sim_tools:
   evolver:
-    species: [8]
-    birth&death:
+    species: [8, 16]
+    birth_death:
+      - [1.0, 2.0]
+      - [2.0, 1.0]
+    sampling_fraction: [0.25]
+    mutation_rate: [1.0, 2.0]
+    path_snippet: "s{species}_bd{birth_death}_f{sampling_fraction}_m{mutation_rate}"
+    match_regex: 's(?P<species>\d+)_bd(?P<birth_rate>[\d.]+)_(?P<death_rate>[\d.]+)_f(?P<sampling_fraction>[\d.]+)_m(?P<mutation_rate>[\d.]+)'
+  evolver2:
+    species: [1, 6]
+    birth_death:
       - [1.0, 2.0]
     sampling_fraction: [0.25]
-    mutation_rate: [1.0]
-    path_snippet: "s{species}_b{birth}_d{death}_f{sampling_fraction}_m{mutation_rate}"
-    match_regex: 'evolver/s(?P<species>\d+)_b(?P<birth_rate>[\d.]+)_d(?P<death_rate>[\d.]+)_f(?P<sampling_fraction>[\d.]+)_m(?P<mutation_rate>[\d.]+)'
-
+    mutation_rate: [1.0, 2.0]
+    path_snippet: "s{species}_bd{birth_death}_f{sampling_fraction}_m{mutation_rate}"
+    match_regex: 's(?P<species>\d+)_bd(?P<birth_rate>[\d.]+)_(?P<death_rate>[\d.]+)_f(?P<sampling_fraction>[\d.]+)_m(?P<mutation_rate>[\d.]+)'
+ 
 # MSA Simulation Tools & Their Parameters
 msa_dir_path: "results/{seed}/msas/{tree_sim_tool}/{tree_params}/{msa_sim_tool}/{msa_params}"
 msa_sim_tools:
@@ -51,43 +60,43 @@ msa_sim_tools:
     max_insertion: 50
     root_length: [500]
     model: ["JC"]
-    path_snipped: "l{lambda}_mu{mu}_r{r}_max{max_insertion}_len{root_length}_{model}"
-    match_regex: 'tkf/l(?P<tkf_lambda>[\d.]+)_mu(?P<tkf_mu>[\d.]+)_r(?P<tkf_r>[\d.]+)_max(?P<max_ins>\d+)_len(?P<root_length>\d+)_(?P<model>[^/]+)'
+    path_snippet: "l{lambda}_mu{mu}_r{r}_max{max_insertion}_len{root_length}_{model}"
+    match_regex: 'l(?P<tkf_lambda>[\d.]+)_mu(?P<tkf_mu>[\d.]+)_r(?P<tkf_r>[\d.]+)_max(?P<max_ins>\d+)_len(?P<root_length>\d+)_(?P<model>[^/]+)'
   alisim:
     model: ["JC"]
     root_length: [500]
-    ir&ip: # (insertion_rate, deletion_rate)
+    ir_ip: # (insertion_rate, deletion_rate)
         # For simulations with indels, we applied empirical parameters (Graur et al. 1989; Gu and Li 1995; Cartwright 2009) with the insertion and deletion rates of 0.03 and 0.09, respectively, and the indel-lengths drawn from a truncated Zipfian (Power-Law) distribution (Fletcher and Yang 2009) (a = 1.7; max = 100). alisim paper and these seem to be also the default params for alisim
       - [0.006, 0.018]
-    path_snipped: "ir{ir}_ip{ip}_len{root_length}_{model}"
-    match_regex: 'alisim/ir(?P<ir>[\d.]+)_ip(?P<ip>[\d.]+)_len(?P<root_length>\d+)_(?P<model>[^/]+)'
+    path_snippet: "rates{ir_ip}_len{root_length}_{model}"
+    match_regex: 'ir(?P<ir>[\d.]+)_ip(?P<ip>[\d.]+)_len(?P<root_length>\d+)_(?P<model>[^/]+)'
 
 model_param_inf_dir: "results/{seed}/model_inference/{tree_sim_tool}{tree_params}/{msa_sim_tool}/{msa_params}/{inference_tool}/{inf_params}"
 model_parameters_inference:
   jati_model_param_search:
-    model&gap:
+    model_gap:
       - ["jc69", "PIP"]
       - ["jc69", "TKF92"]
       - ["jc69", "Missing"]
     epsilon: 1e-5
     params: [0.03, 0.04, 0.5]
-    path_snippet: "{model}_{gap}"
-    match_regex: 'jati_model_param_search/(?P<model>[^/]+)_(?P<gap>[^/]+)'
+    path_snippet: "{model_gap}"
+    match_regex: '(?P<model>[^/]+)_(?P<gap>[^/]+)'
 
 tree_inference_dir: "results/{seed}/tree_inference/{tree_sim_tool}{tree_params}/{msa_sim_tool}/{msa_params}/{inference_tool}/{inf_params}"
 tree_inference_tools:
   jati:
     params: [0.03, 0.04, 0.5]
-    model&gap&move:
+    model_gap_move:
       - ["jc69", "PIP", "NNI"]
       - ["jc69", "PIP", "SPR"]
       - ["jc69", "TKF92", "NNI"]
       - ["NONE", "TKF92", "NNI"]
     max_iterations: 5
-    path_snippet: "{model}_{gap}_{move}"
-    match_regex: 'jati/(?P<model>[^/]+)_(?P<gap>[^/]+)_(?P<move>[^/]+)'
+    path_snippet: "{model_gap_move}"
+    match_regex: '(?P<model>[^/]+)_(?P<gap>[^/]+)_(?P<move>[^/]+)'
   iqtree:
-    models: ["JC"]
+    model: ["JC"]
     path_snippet: "{model}"
-    match_regex: 'iqtree/(?P<model>[^/]+)'
+    match_regex: '(?P<model>[^/]+)'
 

@@ -1,7 +1,12 @@
 configfile: "config.yaml"
 
+# from viz.utils import load_snakemake_config_yaml
+# cfg = load_snakemake_config_yaml()
+# print(cfg)
+
 import os
 
+SEEDS = config["seeds"]
 # Select environment based on config (set by profile)
 ENV = config.get("env", "local")
 PATHS = config["environments"][ENV]
@@ -18,105 +23,110 @@ JATI = PATHS["jati"]
 # Helper to load python module on HPC
 LOAD_PYTHON = f"module load {PYTHON_MODULE}; " if ENV == "hpc" and PYTHON_MODULE else ""
 
-# Tree Generation Parameters
-SPECIES = config["species"]
-BIRTH_DEATH_PAIRS = config["birth_death_rates"]
-SEEDS = config["seeds"]
-SAMPLING = config["sampling_fraction"]
-MUTATION = config["mutation_rate"]
 
+TREE_PATH = config["tree_path"]
+MSA_PATH = config["msa_dir_path"]
 # Inference Tools & Parameters
-INF_TOOLS = config["inference_tools"]
+MODEL_PARAMS_INF = config["model_parameters_inference"]
+TREE_INF_TOOLS = config["tree_inference_tools"]
 MSA_SIM_TOOLS = config["msa_sim_tools"]
 
 # Path Templates from config
-TREE_PARAMS_PATH_SNIPPET = config["tree_params_path_snippet"]
-
-TREE_PATH = config["tree_path"].replace("{tree_params_path_snippet}", TREE_PARAMS_PATH_SNIPPET)
-MSA_PATH = config["msa_dir_path"].replace("{tree_params_path_snippet}", TREE_PARAMS_PATH_SNIPPET)
-INF_PATH = config["inf_dir_path"].replace("{tree_params_path_snippet}", TREE_PARAMS_PATH_SNIPPET)
+# TREE_PARAMS_PATH_SNIPPET = config["tree_params_path_snippet"]
+#
+# TREE_PATH = config["tree_path"].replace("{tree_params_path_snippet}", TREE_PARAMS_PATH_SNIPPET)
+# MSA_PATH = config["msa_dir_path"].replace("{tree_params_path_snippet}", TREE_PARAMS_PATH_SNIPPET)
+# INF_PATH = config["inf_dir_path"].replace("{tree_params_path_snippet}", TREE_PARAMS_PATH_SNIPPET)
 
 
 # TODO if msas get simulated then if they are finished, then jati is run already, even though msa simulation is not finished, and not all msas lens are considered during the priority calculation
 # we could first call the simulation rule and then if that is finished call the inference rule
 
-# Helper functions for priority and path generation
+# this returns a list of all combinations of tree parameters for the given tools (ie not paths)
+def get_params_prod(tool_type):
+    print(f"Getting parameter combinations for {tool_type}...")
+    def normalize(val):
+        if not isinstance(val, list):
+            return [val]
+        if isinstance(val[0], list):
+            return ["-".join(map(str, v)) for v in val]
+        return val
+
+    combos = []
+    for tool_name, tool_conf in config[tool_type].items():
+        param_names = re.findall("{(.+?)}", tool_conf["path_snippet"])
+        param_dict = {p: normalize(tool_conf[p]) for p in param_names}
+        expanded = expand(tool_conf["path_snippet"], **param_dict)
+        combos.append((tool_name, expanded))
+    return combos
+
+
+def get_all_tree_dirs():
+    """Returns all expanded TREE_PATH combinations across all tools and seeds."""
+    dirs = []
+    for tool_name, tree_params in get_params_prod("tree_sim_tools"):
+        paths = expand(TREE_PATH, tree_sim_tool=[tool_name], tree_params=tree_params, seed=SEEDS)
+        dirs.extend(paths)
+    return dirs
+
+print("All tree combinations:")
+for d in get_all_tree_dirs():
+    print(d)
+
 def get_all_msa_dirs():
     dirs = []
-    for tool_name, tool_conf in MSA_SIM_TOOLS.items():
-        if tool_name == "tkf":
-            param_sets = [tool_conf["params_path_snipped"].format(**{
-                "lambda": tool_conf["lambda"], "mu": tool_conf["mu"], 
-                "r": tool_conf["r"], "max_ins": tool_conf["max_ins"],
-                "root_length": rl
-            }) for rl in tool_conf["root_lengths"]]
-        elif tool_name == "alisim":
-            param_sets = [tool_conf["params_path_snipped"].format(ir=p[0], ip=p[1], root_length=rl) 
-                         for p in tool_conf["indel_params"] for rl in tool_conf["root_lengths"]]
-        
-        exp_dict = {
-            "msa_sim_tool": [tool_name],
-            "tool_params": param_sets,
-            "s": SPECIES, "b": [p[0] for p in BIRTH_DEATH_PAIRS], 
-            "d": [p[1] for p in BIRTH_DEATH_PAIRS], 
-            "f": SAMPLING, "m": MUTATION, "seed": SEEDS
-        }
-        dirs.extend(expand(MSA_PATH, **exp_dict))
-    return dirs
-
-def get_all_inference_dirs(template):
-    dirs = []
-    for tool_name, tool_conf in MSA_SIM_TOOLS.items():
-        if tool_name == "tkf":
-            param_sets = [tool_conf["params_path_snipped"].format(**{
-                "lambda": tool_conf["lambda"], "mu": tool_conf["mu"], 
-                "r": tool_conf["r"], "max_ins": tool_conf["max_ins"],
-                "root_length": rl
-            }) for rl in tool_conf["root_lengths"]]
-        elif tool_name == "alisim":
-            param_sets = [tool_conf["params_path_snipped"].format(ir=p[0], ip=p[1], root_length=rl) 
-                         for p in tool_conf["indel_params"] for rl in tool_conf["root_lengths"]]
-        
-        for inf_tool_name, inf_conf in INF_TOOLS.items():
-            if inf_tool_name == "jati":
-                inf_params = []
-                for model, gap, move in inf_conf["model_gap_move"]:
-                    inf_params.extend(expand(inf_conf["path_snippet"], 
-                                             model=[model], 
-                                             gap=[gap],
-                                             move_strategy=[move]))
-            elif inf_tool_name == "true_tree":
-                inf_params = []
-                for model, gap in inf_conf["model_gap"]:
-                    inf_params.extend(expand(inf_conf["path_snippet"], 
-                                             model=[model], 
-                                             gap=[gap]))
-            elif inf_tool_name == "iqtree":
-                inf_params = expand(inf_conf["path_snippet"], 
-                                    model=inf_conf["models"])
-
-            exp_dict = {
-                "msa_sim_tool": [tool_name],
-                "tool_params": param_sets,
-                "inference_tool": [inf_tool_name],
-                "inf_params": inf_params,
-                "s": SPECIES, "b": [p[0] for p in BIRTH_DEATH_PAIRS], 
-                "d": [p[1] for p in BIRTH_DEATH_PAIRS], 
-                "f": SAMPLING, "m": MUTATION, "seed": SEEDS
+    for msa_tool_name, msa_params in get_params_prod("msa_sim_tools"):
+        for tree_tool_name, tree_params in get_params_prod("tree_sim_tools"):
+            ext = {
+                "msa_sim_tool": msa_tool_name, 
+                "msa_params": msa_params,
+                "tree_sim_tool": tree_tool_name,
+                "tree_params": tree_params,
+                "seed": SEEDS
             }
-            dirs.extend(expand(template, **exp_dict))
+            dirs.extend(expand(MSA_PATH, **ext))
     return dirs
 
-rule all:
+for d in get_all_msa_dirs():
+    print(d)
+
+def get_all_tree_inference_dirs(template):
+    dirs = []
+    for inf_tool_name, inf_params in get_params_prod("tree_inference_tools"):
+        for msa_tool_name, msa_params in get_params_prod("msa_sim_tools"):
+            for tree_tool_name, tree_params in get_params_prod("tree_sim_tools"):
+                ext = {
+                    "inference_tool": inf_tool_name,
+                    "inf_params": inf_params,
+                    "msa_sim_tool": msa_tool_name, 
+                    "msa_params": msa_params,
+                    "tree_sim_tool": tree_tool_name,
+                    "tree_params": tree_params,
+                    "seed": SEEDS
+                }
+                dirs.extend(expand(template, **ext))
+    return dirs
+
+print("All inference tree combinations:")
+for d in get_all_tree_inference_dirs(config["tree_inference_dir"]):
+    print(d)
+
+print("All inference model combinations:")
+for d in get_all_tree_inference_dirs(config["model_param_inf_dir"]):
+    print(d)
+
+rule tree_inference:
     input:
-        "results/summary.tsv",
-        "results/msa_summary.tsv",
-        [f"{d}/distances.json" for d in get_all_inference_dirs(INF_PATH)],
+        [f"{d}/final_tree.nwk" for d in get_all_tree_inference_dirs(INF_PATH)],
+
+rule model_param_inference:
+    input:
+        [f"{d}/logl.out" for d in get_all_model_param_inference_dirs(INF_PATH)],
 
 rule simulate_msas:
     input:
-        [f"{d}/msa.fasta" for d in get_all_inference_dirs(MSA_PATH)],
-        [f"{d}/masa.fasta" for d in get_all_inference_dirs(MSA_PATH)],
+        [f"{d}/msa.fasta" for d in get_all_msa_dirs()],
+        [f"{d}/masa.fasta" for d in get_all_msa_dirs()],
 
 rule generate_trees:
     input:
@@ -170,7 +180,13 @@ def get_msa_output(tool_name):
     )
 
 def get_inf_output(tool_name):
-    tool_conf = INF_TOOLS[tool_name]
+    # Look up in both model parameters and tree inference tools
+    if tool_name in MODEL_PARAMS_INF:
+        tool_conf = MODEL_PARAMS_INF[tool_name]
+    elif tool_name in TREE_INF_TOOLS:
+        tool_conf = TREE_INF_TOOLS[tool_name]
+    else:
+        raise ValueError(f"Unknown inference tool: {tool_name}")
     return INF_PATH.replace("{inference_tool}", tool_name).replace(
         "{inf_params}", tool_conf["path_snippet"]
     )
@@ -248,24 +264,25 @@ rule simulate_alisim_ancestral_alignment:
         mv $(dirname {output.msa})/masa.fa {output.msa}
         """
 
-rule true_tree_inference:
+rule jati_model_param_search:
     input:
         msa = MSA_PATH + "/msa.fasta",
         tree = MSA_PATH + "/tree.nwk"
     output:
-        final_tree = get_inf_output("true_tree") + "/final_tree.nwk",
-        logl = get_inf_output("true_tree") + "/logl.out",
-        log = get_inf_output("true_tree") + "/log.txt"
+        final_tree = get_inf_output("jati_model_param_search") + "/final_tree.nwk",
+        logl = get_inf_output("jati_model_param_search") + "/logl.out",
+        log = get_inf_output("jati_model_param_search") + "/log.txt"
     threads: 1
     resources:
         mem_mb=4096
     params:
-        epsilon = INF_TOOLS["true_tree"]["epsilon"],
-        paras = " ".join(map(str, INF_TOOLS["true_tree"]["params"])),
-        out_base = get_inf_output("true_tree")
+        epsilon = MODEL_PARAMS_INF["jati_model_param_search"]["epsilon"],
+        paras = " ".join(map(str, MODEL_PARAMS_INF["jati_model_param_search"]["params"])),
+        out_base = get_inf_output("jati_model_param_search")
     shell:
         """
         mkdir -p {params.out_base}
+        rm -rf {params.out_base}
         {MODEL_SEARCH_PHYLO} \
             --out-folder {params.out_base} \
             --seq-file {input.msa} \
@@ -276,14 +293,12 @@ rule true_tree_inference:
             --epsilon {params.epsilon} \
             --seed {wildcards.seed} \
             -l warn --no-timestamp
-        mv {params.out_base}/jati_run_out/jati_run_tree.nwk {output.final_tree}
+        mv {params.out_base}/jati_run_out/jati_run_tree.newick {output.final_tree}
         mv {params.out_base}/jati_run_out/jati_run_logl.out {output.logl}
         mv {params.out_base}/jati_run_out/jati_run.log {output.log}
         """
 
 
-# TODO: add this to the start
-# rm -rf {params.out_base}/jati_run_out #because rerunning fails because jati cannot overwrite files
 rule jati_inference:
     input:
         msa = MSA_PATH + "/msa.fasta"
@@ -296,13 +311,14 @@ rule jati_inference:
     resources:
         mem_mb=4096
     params:
-        paras = " ".join(map(str, INF_TOOLS["jati"]["params"])),
-        max_iterations = INF_TOOLS["jati"]["max_iterations"],
+        paras = " ".join(map(str, TREE_INF_TOOLS["jati"]["params"])),
+        max_iterations = TREE_INF_TOOLS["jati"]["max_iterations"],
         out_base = get_inf_output("jati"),
         force_nni = lambda wildcards: "--force-nni" if wildcards.move_strategy == "NNI" else ""
     shell:
         """
         mkdir -p {params.out_base}
+        rm -rf {params.out_base}
         {JATI} \
             --out-folder {params.out_base} \
             --seq-file {input.msa} \
@@ -314,7 +330,7 @@ rule jati_inference:
             -l warn \
             --max-iterations {params.max_iterations} \
             --no-timestamp
-        mv {params.out_base}/jati_run_out/jati_run_start_tree.nwk {output.start_tree}
+        mv {params.out_base}/jati_run_out/jati_run_start_tree.newick {output.start_tree}
         mv {params.out_base}/jati_run_out/jati_run_tree.nwk {output.final_tree}
         mv {params.out_base}/jati_run_out/jati_run_logl.out {output.logl}
         mv {params.out_base}/jati_run_out/jati_run.log {output.log}
