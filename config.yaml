@@ -27,12 +27,11 @@ environments:
 # to extract metadata directly from directory names.
 
 # General
-# seeds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30]
+seeds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30]
 # seeds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-seeds: [1]
 # PAML Tree Generation Parameters
-# species: [8, 16, 32, 64]
-species: [8]
+species: [8, 16, 32, 64]
+# species: [8]
 
 birth_death_rates:
   - [1.0, 2.0]
@@ -65,9 +64,14 @@ msa_sim_tools:
 
 # Inference Tools & Their Parameters
 inference_tools:
+  # TODO: also make a rule for true tree and substitution model and iqtree, 
+  # they should yield the same logl
   true_tree:
-    models: ["jc69"]
-    gap_strategies: ["PIP", "TKF92"]
+    model_gap:
+      - ["jc69", "PIP"]
+      - ["jc69", "TKF92"]
+      - ["jc69", "Missing"]
+      # this is not yet configured to work with NONE
     epsilon: 1e-5
     params: [0.03, 0.04, 0.5]
     path_snippet: "{model}_{gap}"
@@ -75,10 +79,11 @@ inference_tools:
   jati:
     models: ["jc69"]
     params: [0.03, 0.04, 0.5]
-    gap_move:
-      # - ["PIP", "NNI"]
-      # - ["PIP", "SPR"]
-      - ["TKF92", "NNI"]
+    model_gap_move:
+      - ["jc69", "PIP", "NNI"]
+      - ["jc69", "PIP", "SPR"]
+      - ["jc69", "TKF92", "NNI"]
+      - ["NONE", "TKF92", "NNI"]
     max_iterations: 5
     path_snippet: "{model}_{gap}_{move_strategy}"
     match_regex: 'jati/(?P<model>[^/]+)_(?P<gap_strategy>[^/]+)_(?P<move_strategy>[^/]+)'

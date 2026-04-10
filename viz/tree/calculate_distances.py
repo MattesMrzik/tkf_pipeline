@@ -1,0 +1,52 @@
+import dendropy
+import sys
+
+def calculate_distances(tree_path_a, tree_path_b):
+    tree_paths = [tree_path_a, tree_path_b]
+    
+    trees = read_trees(tree_paths)
+    true_tree = trees[0]
+    final_tree = trees[1]
+    
+    # Calculate distances for final tree
+    final_rf = dendropy.calculate.treecompare.symmetric_difference(true_tree, final_tree)
+    final_kf = dendropy.calculate.treecompare.euclidean_distance(true_tree, final_tree)
+
+    results = {
+        "rf": float(final_rf),
+        "kf": float(final_kf),
+    }
+
+    return results
+    
+
+def read_trees(tree_paths):
+    tns = dendropy.TaxonNamespace()
+    loaded_trees = []
+    
+    def reconcile_taxa(tree, namespace):
+        for leaf in tree.leaf_node_iter():
+            if leaf.label:
+                taxon = namespace.require_taxon(label=leaf.label)
+                leaf.taxon = taxon
+
+    for path in tree_paths:
+        try:
+            tree = dendropy.Tree.get(
+                path=path,
+                schema="newick",
+                preserve_underscores=True,
+                suppress_internal_node_taxa=True,
+                suppress_leaf_node_taxa=True,
+                taxon_namespace=tns
+            )
+            reconcile_taxa(tree, tns)
+            tree.is_rooted = False
+            loaded_trees.append(tree)
+        except Exception as e:
+            print(f"Error loading tree from {path}: {e}", file=sys.stderr)
+            sys.exit(1)
+
+    return loaded_trees
+
+

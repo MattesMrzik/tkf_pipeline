@@ -1,8 +1,9 @@
 import json
 import os
-import re
 import csv
-from utils.summarize_utils import get_tree_params, get_msa_sim_params, get_inference_params
+from tree.utils import get_tree_params
+from msa.utils import get_msa_sim_params
+from inference.utils import get_inference_params
 
 def load_msa_stats(msa_summary_path):
     """Loads MSA stats from the pre-aggregated msa_summary.tsv into a lookup dictionary."""

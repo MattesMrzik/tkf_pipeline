@@ -1,5 +1,7 @@
 import os
 import re
+import math
+from collections import Counter
 
 def get_fasta_length(msa_path):
     """Returns the length of the first sequence in the FASTA."""
@@ -21,6 +23,25 @@ def get_fasta_length(msa_path):
             pass
     return "NA"
 
+def get_sequences(msa_path):
+    """Utility to read sequences from a FASTA file."""
+    sequences = []
+    with open(msa_path, 'r') as f:
+        current_seq = []
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            if line.startswith(">"):
+                if current_seq:
+                    sequences.append("".join(current_seq))
+                current_seq = []
+            else:
+                current_seq.append(line)
+        if current_seq:
+            sequences.append("".join(current_seq))
+    return sequences
+
 def get_gap_stats(msa_path):
     """Calculates comprehensive gap statistics for an MSA."""
     if not os.path.exists(msa_path):
@@ -30,21 +51,7 @@ def get_gap_stats(msa_path):
             "avg_gap_len": "NA"
         }
     try:
-        sequences = []
-        with open(msa_path, 'r') as f:
-            current_seq = []
-            for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-                if line.startswith(">"):
-                    if current_seq:
-                        sequences.append("".join(current_seq))
-                    current_seq = []
-                else:
-                    current_seq.append(line)
-            if current_seq:
-                sequences.append("".join(current_seq))
+        sequences = get_sequences(msa_path)
 
         if not sequences:
             return {"gap%": "NA", "gap_col%": "NA", "avg_gap_len": "NA"}
@@ -85,3 +92,36 @@ def get_gap_stats(msa_path):
     except Exception:
         pass
     return {"gap%": "NA", "gap_col%": "NA", "avg_gap_len": "NA"}
+
+def calculate_gap_free_entropy(msa_path):
+    """Calculates the average Shannon entropy over all gap-free columns."""
+    if not os.path.exists(msa_path):
+        return "NA"
+    try:
+        sequences = get_sequences(msa_path)
+        if not sequences:
+            return "NA"
+            
+        msa_len = len(sequences[0])
+        num_seqs = len(sequences)
+        
+        entropies = []
+        for j in range(msa_len):
+            col = [sequences[i][j] for i in range(num_seqs)]
+            if '-' in col:
+                continue
+            
+            # Calculate Shannon Entropy for the column
+            counts = Counter(col)
+            entropy = 0.0
+            for char in counts:
+                p = counts[char] / num_seqs
+                entropy -= p * math.log2(p)
+            entropies.append(entropy)
+            
+        if not entropies:
+            return 0.0
+            
+        return round(sum(entropies) / len(entropies), 4)
+    except Exception:
+        return "NA"

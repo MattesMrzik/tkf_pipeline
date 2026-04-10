@@ -80,15 +80,17 @@ def get_all_inference_dirs(template):
         for inf_tool_name, inf_conf in INF_TOOLS.items():
             if inf_tool_name == "jati":
                 inf_params = []
-                for gap, move in inf_conf["gap_move"]:
+                for model, gap, move in inf_conf["model_gap_move"]:
                     inf_params.extend(expand(inf_conf["path_snippet"], 
-                                             model=inf_conf["models"], 
+                                             model=[model], 
                                              gap=[gap],
                                              move_strategy=[move]))
             elif inf_tool_name == "true_tree":
-                inf_params = expand(inf_conf["path_snippet"], 
-                                   model=inf_conf["models"],
-                                   gap=inf_conf["gap_strategies"])
+                inf_params = []
+                for model, gap in inf_conf["model_gap"]:
+                    inf_params.extend(expand(inf_conf["path_snippet"], 
+                                             model=[model], 
+                                             gap=[gap]))
             elif inf_tool_name == "iqtree":
                 inf_params = expand(inf_conf["path_snippet"], 
                                     model=inf_conf["models"])
@@ -279,6 +281,9 @@ rule true_tree_inference:
         mv {params.out_base}/jati_run_out/jati_run.log {output.log}
         """
 
+
+# TODO: add this to the start
+# rm -rf {params.out_base}/jati_run_out #because rerunning fails because jati cannot overwrite files
 rule jati_inference:
     input:
         msa = MSA_PATH + "/msa.fasta"
@@ -328,85 +333,8 @@ rule iqtree_inference:
     shell:
         """
         mkdir -p $(dirname {output.final_tree})
-        {IQTREE3} -s {input.msa} -m {wildcards.model} --prefix $(dirname {output.final_tree})/iqtree -nt 1 --seed {wildcards.seed}
+        {IQTREE3} -s {input.msa} -m {wildcards.model} --prefix $(dirname {output.final_tree})/iqtree -nt 1 --seed {wildcards.seed} -redo
         mv $(dirname {output.final_tree})/iqtree.treefile {output.final_tree}
         mv $(dirname {output.final_tree})/iqtree.log {output.log}
         grep "Optimal log-likelihood:" {output.log} | sed 's/.*: //' > {output.logl}
-        """
-
-rule calculate_distances:
-    input:
-        true_tree = MSA_PATH + "/tree.nwk",
-        final_tree = INF_PATH + "/final_tree.newick"
-    output:
-        dist_file = INF_PATH + "/distances.json"
-    threads: 1
-    resources:
-        mem_mb=1024
-    shell:
-        """
-        {LOAD_PYTHON}
-        START_TREE=$(dirname {input.final_tree})/start_tree.newick
-        CMD="{PYTHON} scripts/calculate_distances.py --true-tree {input.true_tree} --final-tree {input.final_tree} --output {output.dist_file}"
-        if [ -f "$START_TREE" ]; then CMD="$CMD --start-tree $START_TREE"; fi
-        $CMD
-        """
-
-rule calculate_time:
-    input:
-        log = INF_PATH + "/log.txt"
-    output:
-        time_file = INF_PATH + "/time.txt"
-    threads: 1
-    resources:
-        mem_mb=512
-    shell:
-        """
-        {LOAD_PYTHON}
-        {PYTHON} scripts/calculate_time.py {input.log} {output.time_file}
-        """
-
-rule summarize_msas:
-    input:
-        [f"{d}/msa.fasta" for d in get_all_msa_dirs()]
-    output:
-        tsv_path = "results/msa_summary.tsv"
-    threads: 1
-    resources:
-        mem_mb=2048
-    params:
-        msa_dirs = get_all_msa_dirs(),
-        sn_config = config
-    script:
-        "scripts/summarize_msas.py"
-
-rule summarize_results:
-    input:
-        msa_summary = "results/msa_summary.tsv",
-        dist_files = [f"{d}/distances.json" for d in get_all_inference_dirs(INF_PATH)],
-        time_files = [f"{d}/time.txt" for d in get_all_inference_dirs(INF_PATH)],
-        logl_files = [f"{d}/logl.out" for d in get_all_inference_dirs(INF_PATH)]
-    output:
-        tsv_path = "results/summary.tsv"
-    threads: 1
-    resources:
-        mem_mb=2048
-    params:
-        dirs = get_all_inference_dirs(INF_PATH),
-        sn_config = config
-    script:
-        "scripts/summarize_results.py"
-
-rule obsidian:
-    input:
-        tsv = "results/summary.tsv"
-    output:
-        md = "/Users/mrzi/Seafile/phd_obsidian/notes/pipeline_out/summary_table.md"
-    threads: 1
-    resources:
-        mem_mb=512
-    shell:
-        """
-        {LOAD_PYTHON}
-        {PYTHON} scripts/tsv_to_md.py {input.tsv} {output.md}
         """

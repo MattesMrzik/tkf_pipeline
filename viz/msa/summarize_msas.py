@@ -1,7 +1,6 @@
 import os
-import re
 import csv
-from utils.fasta_utils import get_fasta_length, get_gap_stats
+from utils.fasta_utils import get_fasta_length, get_gap_stats, calculate_gap_free_entropy
 from utils.summarize_utils import get_tree_params, get_msa_sim_params
 
 def main():
@@ -23,6 +22,7 @@ def main():
             row["msa_len"] = get_fasta_length(msa_path)
             gap_stats = get_gap_stats(msa_path)
             row.update(gap_stats)
+            row["avg_gap_free_entropy"] = calculate_gap_free_entropy(msa_path)
             
             # File URL
             abs_msa_path = os.path.abspath(msa_path)
@@ -32,6 +32,7 @@ def main():
             row["gap%"] = "NA"
             row["gap_col%"] = "NA"
             row["avg_gap_len"] = "NA"
+            row["avg_gap_free_entropy"] = "NA"
             row["msa"] = "NA"
             
         all_rows.append(row)
@@ -41,7 +42,7 @@ def main():
     column_order = [
         "seed", "species", "birth_rate", "death_rate", "sampling_fraction", "mutation_rate",
         "msa_sim_tool", "root_length", "tkf_lambda", "tkf_mu", "tkf_r", "max_ins", "ir", "ip",
-        "msa_len", "gap%", "gap_col%", "avg_gap_len", "msa", "msa_dir"
+        "msa_len", "gap%", "gap_col%", "avg_gap_len", "avg_gap_free_entropy", "msa", "msa_dir"
     ]
     
     final_columns = [col for col in column_order if col in all_keys]
