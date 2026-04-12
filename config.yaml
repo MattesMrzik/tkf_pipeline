@@ -12,14 +12,14 @@ environments:
     model_search_phylo: "/Users/mrzi/Documents/develop/model_search_phylo/target/release/model-search-phylo"
     jati: "/Users/mrzi/Documents/develop/jati_tkf/JATI/target/debug/jati"
   hpc:
-    # Placeholders for cluster paths - update these on the HPC
-    python_bin: "python3" # Will use 'module load python' or conda env
-    python_module: "python/3.9.12-pe5.34"
-    evolver: "/cfs/earth/scratch/USER/software/paml4/paml/src/evolver"
-    simulate_tkf: "/cfs/earth/scratch/USER/develop/simulate_tkf/target/release/simulate_tkf"
-    iqtree3: "/cfs/earth/scratch/USER/software/iqtree3/iqtree3/build/iqtree3"
-    model_search_phylo: "/cfs/earth/scratch/USER/develop/model_search_phylo/target/release/model-search-phylo"
-    jati: "/cfs/earth/scratch/USER/develop/jati_tkf/JATI/target/release/jati"
+    python_bin: "python3"
+    python_module: ""
+    conda_env: "snakemake"
+    evolver: "evolver"
+    simulate_tkf: "/cfs/earth/scratch/mrzi/develop/simulate_tkf/target/release/simulate_tkf"
+    iqtree3: "/cfs/earth/scratch/mrzi/software/iqtree3/iqtree3/build/iqtree3"
+    model_search_phylo: "/cfs/earth/scratch/mrzi/develop/model_search_phylo/target/release/model-search-phylo"
+    jati: "/cfs/earth/scratch/mrzi/develop/jati_tkf/JATI/target/release/jati"
 
 # NOTE on Regex Fields:
 # 'tree_match', 'match_regex', and 'inf_match' are used by scripts/aggregate_results.py

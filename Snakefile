@@ -21,7 +21,8 @@ IQTREE3 = PATHS["iqtree3"]
 MODEL_SEARCH_PHYLO = PATHS["model_search_phylo"]
 JATI = PATHS["jati"]
 
-LOAD_PYTHON = f"module load {PYTHON_MODULE}; " if ENV == "hpc" and PYTHON_MODULE else ""
+CONDA_ENV = PATHS.get("conda_env", "")
+LOAD_PYTHON = f"source conda activate {CONDA_ENV}; " if ENV == "hpc" and CONDA_ENV else ""
 
 TREE_PATH = config["tree_path"]
 MSA_PATH = config["msa_dir_path"]
