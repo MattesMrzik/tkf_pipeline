@@ -1,24 +1,18 @@
 # profiles/slurm/config.yaml
+executor: slurm
 jobs: 320
-cluster:
-  mkdir -p logs/slurm/{rule} &&
-  sbatch
-    --partition=earth-3
-    --qos=earth-3.1d
-    --cpus-per-task={threads}
-    --mem={resources.mem_mb}
-    --time=1-00:00:00
-    --constraint=rhel8
-    --job-name=smk-{rule}
-    --output=logs/slurm/{rule}/%j-{rule}.out
-    --error=logs/slurm/{rule}/%j-{rule}.err
-    --parsable
 default-resources:
-  - threads=1
+  - slurm_partition=earth-3
+  - slurm_qos=earth-3.test
+  - slurm_time="1-00:00:00"
+  - slurm_extra="--constraint=rhel8"
   - mem_mb=4096
-config:
-  env: "hpc"
+  - threads=1
+default-group-jobs: 1
+latency-wait: 60
 restart-times: 1
 max-jobs-per-second: 10
-latency-wait: 60
 local-cores: 1
+config:
+  env: "hpc"
+

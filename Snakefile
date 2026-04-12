@@ -39,7 +39,6 @@ wildcard_constraints:
         **config["model_parameters_inf_tools"]
     })
 
-
 rule all_trees:
     input:
         make_targets(config["tree_path"], "tree")
@@ -67,7 +66,6 @@ rule all:
         rules.all_msas.input,
         rules.all_model_inferences.input,
         rules.all_tree_inferences.input,
-
 
 rule evolver_tree:
     output:
