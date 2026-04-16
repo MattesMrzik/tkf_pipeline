@@ -317,6 +317,7 @@ rule tkf_indel_asr:
         mem_mb=4096
     shell:
         """
+        rm -rf $(dirname {output.asr})
         mkdir -p $(dirname {output.asr})
         {INDEL_ASR} \
             --seq-file {input.msa} \
@@ -340,6 +341,7 @@ rule parsimony_indel_asr:
         mem_mb=4096
     shell:
         """
+        rm -rf $(dirname {output.asr})
         mkdir -p $(dirname {output.asr})
         {INDEL_ASR} \
             --seq-file {input.msa} \
@@ -361,6 +363,7 @@ rule tkf_indel_asr_and_params:
         mem_mb=4096
     shell:
         """
+        rm -rf $(dirname {output.asr})
         mkdir -p $(dirname {output.asr})
         {INDEL_ASR} \
             --seq-file {input.msa} \
@@ -400,8 +403,8 @@ rule jati_inference:
         force_nni = lambda wildcards: "--force-nni" if wildcards.move == "NNI" else ""
     shell:
         """
-        mkdir -p {params.out_base}
         rm -rf {params.out_base}
+        mkdir -p {params.out_base}
         {JATI} \
             --out-folder {params.out_base} \
             --seq-file {input.msa} \
