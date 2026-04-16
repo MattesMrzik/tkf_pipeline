@@ -236,8 +236,8 @@ rule simulate_alisim_ancestral_alignment:
 
 rule jati_model_param_search:
     input:
-        masa = MSA_PATH + "/masa.fasta",
-        msa = MSA_PATH + "/msa.fasta",
+        masa = MSA_PATH + "/masa.fasta", # using this for TKF
+        msa = MSA_PATH + "/msa.fasta", # using this for non-TKF
         tree = MSA_PATH + "/tree.nwk"
     output:
         logl = get_inf_output("jati_model_param_search") + "/logl.out",
