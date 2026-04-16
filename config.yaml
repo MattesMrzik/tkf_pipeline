@@ -12,6 +12,7 @@ environments:
     iqtree3: "/Users/mrzi/Documents/software/iqtree3/iqtree3/build/iqtree3"
     model_search_phylo: "/Users/mrzi/Documents/develop/tkf_eval/tools/model_search_phylo/target/debug/model-search-phylo"
     jati: "/Users/mrzi/Documents/develop/tkf_eval/tools/JATI/target/debug/jati"
+    indel_asr: "/Users/mrzi/Documents/develop/tkf_eval/tools/indel_asr/target/debug/indel_asr"
   hpc:
     python_bin: "python3"
     python_module: ""
@@ -97,9 +98,11 @@ asr_with_true_params:
   dir: "results/asr/{tree_sim_tool}/{tree_params}/{msa_sim_tool}/{msa_params}/{inference_tool}/{inf_params}/seed{seed}"
   tools:
     tkf_reestimate:
-      path_snippet: "dummy"
+      max_iterations: 5
+      epsilon: 1e-5
+      path_snippet: "{max_iterations}iter_epsilon{epsilon}"
     dollo_parsimony:
-      path_snippet: "dummy"
+      path_snippet: "no_params"
 
 asr_and_params:
   dir: "results/asr_and_params/{tree_sim_tool}/{tree_params}/{msa_sim_tool}/{msa_params}/{inference_tool}/{inf_params}/seed{seed}"

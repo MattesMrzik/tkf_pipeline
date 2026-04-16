@@ -21,6 +21,7 @@ SIMULATE_TKF = PATHS["simulate_tkf"]
 IQTREE3 = PATHS["iqtree3"]
 MODEL_SEARCH_PHYLO = PATHS["model_search_phylo"]
 JATI = PATHS["jati"]
+INDEL_ASR = PATHS["indel_asr"]
 
 CONDA_ENV = PATHS.get("conda_env", "")
 LOAD_PYTHON = f"source conda activate {CONDA_ENV}; " if ENV == "hpc" and CONDA_ENV else ""
@@ -47,12 +48,12 @@ rule all_trees:
 rule all_msas:
     input:
         make_targets(config["msa_sim"]["dir"] + "/msa.fasta", "tree", "msa"),
-        make_targets(config["msa_sim"]["dir"] + "/masa.fasta", "tree", "msa")
+        make_targets(config["msa_sim"]["dir"] + "/masa.fasta", "tree", "msa"),
+        [f for f in make_targets(config["msa_sim"]["dir"] + "/sim_logl.out", "tree", "msa") if "/tkf/" in f]
 
 rule all_model_infs:
     input:
-        make_targets(config["model_param_inf"]["dir"] + "/logl.out", "tree", "msa", "minf"),
-        [f for f in make_targets(config["msa_sim"]["dir"] + "/sim_logl.out", "tree", "msa") if "/tkf/" in f]
+        make_targets(config["model_param_inf"]["dir"] + "/logl.out", "tree", "msa", "minf")
 
 rule all_tree_infs:
     input:
@@ -290,6 +291,55 @@ rule iqtree_model_param_search:
         mv $(dirname {output.logl})/*.log {output.log}
         grep "Optimal log-likelihood:" {output.log} | sed 's/.*: //' > {output.logl}
         rm $(dirname {output.logl})/iqtree_model_search*
+        """
+
+#######################################################################
+#######################################################################
+# ASR 
+#######################################################################
+#######################################################################
+
+rule tkf_indel_asr:
+    input:
+        msa = MSA_PATH + "/msa.fasta",
+        tree = MSA_PATH + "/tree.nwk"
+    output:
+        asr = get_inf_output("asr_with_true_params", "tkf_reestimate") + "/masa.fasta"
+    threads: 1
+    resources:
+        mem_mb=4096
+    shell:
+        """
+        mkdir -p $(dirname {output.asr})
+        {INDEL_ASR} \
+            -- seq-file {input.msa} \
+            -- tree-file {input.tree} \
+            -- out-folder $(dirname {output.asr}) \
+            -- algorithm-type TKF92 \
+            -- params {wildcards.lambda} {wildcards.mu} {wildcards.r} \
+            -- seed {wildcards.seed} \
+            -- max-iterations {wildcards.max_iterations} \
+            -- epsilon {wildcards.epsilon} 
+        """
+
+rule parsimony_indel_asr:
+    input:
+        msa = MSA_PATH + "/msa.fasta",
+        tree = MSA_PATH + "/tree.nwk"
+    output:
+        asr = get_inf_output("asr_with_true_params", "dollo_parsimony") + "/masa.fasta"
+    threads: 1
+    resources:
+        mem_mb=4096
+    shell:
+        """
+        mkdir -p $(dirname {output.asr})
+        {INDEL_ASR} \
+            -- seq-file {input.msa} \
+            -- tree-file {input.tree} \
+            -- out-folder $(dirname {output.asr}) \
+            -- algorithm-type parsimony \
+            -- seed {wildcards.seed} 
         """
 
 #######################################################################
