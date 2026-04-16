@@ -25,38 +25,38 @@ JATI = PATHS["jati"]
 CONDA_ENV = PATHS.get("conda_env", "")
 LOAD_PYTHON = f"source conda activate {CONDA_ENV}; " if ENV == "hpc" and CONDA_ENV else ""
 
-TREE_PATH = config["tree_path"]
-MSA_PATH = config["msa_dir_path"]
-MODEL_PARAMS_INF_TOOLS = config["model_parameters_inf_tools"]
-TREE_INF_TOOLS = config["tree_inf_tools"]
-MSA_SIM_TOOLS = config["msa_sim_tools"]
+TREE_PATH = config["tree_sim"]["dir"]
+MSA_PATH = config["msa_sim"]["dir"]
+MODEL_PARAMS_INF_TOOLS = config["model_param_inf"]["tools"]
+TREE_INF_TOOLS = config["tree_inf"]["tools"]
+MSA_SIM_TOOLS = config["msa_sim"]["tools"]
 
 # apply globally
 wildcard_constraints:
     **infer_wildcard_constraints({
-        **config["tree_sim_tools"],
-        **config["msa_sim_tools"],
-        **config["tree_inf_tools"],
-        **config["model_parameters_inf_tools"]
+        **config["tree_sim"]["tools"],
+        **config["msa_sim"]["tools"],
+        **config["tree_inf"]["tools"],
+        **config["model_param_inf"]["tools"]
     })
 
 rule all_trees:
     input:
-        make_targets(config["tree_path"], "tree")
+        make_targets(config["tree_sim"]["dir"], "tree")
 
 rule all_msas:
     input:
-        make_targets(config["msa_dir_path"] + "/msa.fasta", "tree", "msa"),
-        make_targets(config["msa_dir_path"] + "/masa.fasta", "tree", "msa")
+        make_targets(config["msa_sim"]["dir"] + "/msa.fasta", "tree", "msa"),
+        make_targets(config["msa_sim"]["dir"] + "/masa.fasta", "tree", "msa")
 
 rule all_model_infs:
     input:
-        make_targets(config["model_param_inf_dir"] + "/logl.out", "tree", "msa", "minf"),
-        [f for f in make_targets(config["msa_dir_path"] + "/sim_logl.out", "tree", "msa") if "/tkf/" in f]
+        make_targets(config["model_param_inf"]["dir"] + "/logl.out", "tree", "msa", "minf"),
+        [f for f in make_targets(config["msa_sim"]["dir"] + "/sim_logl.out", "tree", "msa") if "/tkf/" in f]
 
 rule all_tree_infs:
     input:
-        make_targets(config["tree_inf_dir"] + "/final_tree.nwk", "tree", "msa", "tinf")
+        make_targets(config["tree_inf"]["dir"] + "/final_tree.nwk", "tree", "msa", "tinf")
 
 rule all_tree_pngs:
     input:
@@ -87,6 +87,7 @@ rule evolver_tree:
     shell:
         """
         printf "2\\n{wildcards.species}\\n1 {wildcards.seed} 1\\n{wildcards.birth} {wildcards.death} {wildcards.sampling_fraction} {wildcards.mutation_rate}\\n0\\n" | {EVOLVER} > /dev/null 2>&1
+        mkdir -p $(dirname {output.tree})
         tail -n 1 evolver.out > {output.tree}.raw
         {ROOTER} --i {output.tree_raw} --ow {output.tree} --owo {output.tree_wo}
         """
@@ -240,9 +241,9 @@ rule jati_model_param_search:
         msa = MSA_PATH + "/msa.fasta", # using this for non-TKF
         tree = MSA_PATH + "/tree.nwk"
     output:
-        logl = get_inf_output("jati_model_param_search") + "/logl.out",
-        log = get_inf_output("jati_model_param_search") + "/log.txt",
-        params = get_inf_output("jati_model_param_search") + "/params.json"
+        logl = get_inf_output("model_param_inf", "jati_model_param_search") + "/logl.out",
+        log = get_inf_output("model_param_inf", "jati_model_param_search") + "/log.txt",
+        params = get_inf_output("model_param_inf", "jati_model_param_search") + "/params.json"
     threads: 1
     resources:
         mem_mb=4096
@@ -250,7 +251,7 @@ rule jati_model_param_search:
         epsilon = MODEL_PARAMS_INF_TOOLS["jati_model_param_search"]["epsilon"],
         seq_file = lambda wc, input: input.masa if wc.gap == "TKF92" else input.msa,
         paras = " ".join(map(str, MODEL_PARAMS_INF_TOOLS["jati_model_param_search"]["params"])),
-        out_base = get_inf_output("jati_model_param_search")
+        out_base = get_inf_output("model_param_inf", "jati_model_param_search")
     shell:
         """
         mkdir -p {params.out_base}
@@ -276,8 +277,8 @@ rule iqtree_model_param_search:
         msa = MSA_PATH + "/msa.fasta",
         tree = MSA_PATH + "/tree.nwk.wo"
     output:
-        logl = get_inf_output("iqtree_model_param_search") + "/logl.out",
-        log = get_inf_output("iqtree_model_param_search") + "/log.txt"
+        logl = get_inf_output("model_param_inf", "iqtree_model_param_search") + "/logl.out",
+        log = get_inf_output("model_param_inf", "iqtree_model_param_search") + "/log.txt"
     threads: 1
     resources:
         mem_mb=4096
@@ -302,17 +303,17 @@ rule jati_inference:
     input:
         msa = MSA_PATH + "/msa.fasta"
     output:
-        start_tree = get_inf_output("jati") + "/start_tree.nwk",
-        final_tree = get_inf_output("jati") + "/final_tree.nwk",
-        logl = get_inf_output("jati") + "/logl.out",
-        log = get_inf_output("jati") + "/log.txt"
+        start_tree = get_inf_output("tree_inf", "jati") + "/start_tree.nwk",
+        final_tree = get_inf_output("tree_inf", "jati") + "/final_tree.nwk",
+        logl = get_inf_output("tree_inf", "jati") + "/logl.out",
+        log = get_inf_output("tree_inf", "jati") + "/log.txt"
     threads: 1
     resources:
         mem_mb=4096
     params:
         paras = " ".join(map(str, TREE_INF_TOOLS["jati"]["params"])),
         max_iterations = TREE_INF_TOOLS["jati"]["max_iterations"],
-        out_base = get_inf_output("jati"),
+        out_base = get_inf_output("tree_inf", "jati"),
         force_nni = lambda wildcards: "--force-nni" if wildcards.move == "NNI" else ""
     shell:
         """
@@ -339,9 +340,9 @@ rule iqtree_inference:
     input:
         msa = MSA_PATH + "/msa.fasta"
     output:
-        final_tree = get_inf_output("iqtree") + "/final_tree.nwk",
-        log = get_inf_output("iqtree") + "/log.txt",
-        logl = get_inf_output("iqtree") + "/logl.out"
+        final_tree = get_inf_output("tree_inf", "iqtree") + "/final_tree.nwk",
+        log = get_inf_output("tree_inf", "iqtree") + "/log.txt",
+        logl = get_inf_output("tree_inf", "iqtree") + "/logl.out"
     threads: 1
     resources:
         mem_mb=4096
