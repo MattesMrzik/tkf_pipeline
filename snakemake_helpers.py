@@ -63,12 +63,15 @@ def expand_tool_combos(cfg_dict):
 
 config = load_snakemake_config_yaml()
 
-# To match the wildcards in the paths to the correct stage
+# To match the wildcards in the paths to the correct stages
+# The first must match the tool category name in the config as it is used to retrieve the path
 STAGES = {
     "tree_sim": {"tool_wc": "tree_sim_tool", "params_wc": "tree_params"},
     "msa_sim": {"tool_wc": "msa_sim_tool", "params_wc": "msa_params"},
     "model_param_inf": {"tool_wc": "inference_tool", "params_wc": "inf_params"},
     "tree_inf": {"tool_wc": "inference_tool", "params_wc": "inf_params"},
+    "asr": {"tool_wc": "inference_tool", "params_wc": "inf_params"},
+    "asr_and_params": {"tool_wc": "inference_tool", "params_wc": "inf_params"},
 }
 
 def make_targets(cfg, *stages, primary, suffix=""):
@@ -100,3 +103,9 @@ def get_inf_output(tool_type, tool_name):
     tool_conf = config[tool_type]["tools"][tool_name]
     snippet = tool_conf.get("path_snippet", tool_name)
     return config[tool_type]["dir"].replace("{inference_tool}", tool_name).replace("{inf_params}", snippet)
+
+def get_inf_output_with_msa_params(tool_type, tool_name, msa_tool_name):
+    tool_conf = config[tool_type]["tools"][tool_name]
+    snippet = tool_conf.get("path_snippet", tool_name)
+    msa_snippet = config["msa_sim"]["tools"][msa_tool_name].get("path_snippet", msa_tool_name)
+    return config[tool_type]["dir"].replace("{inference_tool}", tool_name).replace("{inf_params}", snippet).replace("{msa_params}", msa_snippet)

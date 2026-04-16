@@ -5,7 +5,7 @@ configfile: "config.yaml"
 # print(cfg)
 
 import os
-from snakemake_helpers import infer_wildcard_constraints, make_targets, get_tree_path, get_msa_output, get_inf_output
+from snakemake_helpers import infer_wildcard_constraints, make_targets, get_tree_path, get_msa_output, get_inf_output, get_inf_output_with_msa_params
 
 SEEDS = config["seeds"]
 # Select environment based on config (set by profile)
@@ -62,6 +62,12 @@ rule all_tree_infs:
 rule all_tree_pngs:
     input:
         [p.replace(".nwk", ".png") for p in rules.all_trees.input]
+
+asr_targets = make_targets(config, "tree_sim", "msa_sim", primary="asr")
+asr_targets += make_targets(config, "tree_sim", "msa_sim", primary="asr_and_params")
+rule all_asrs:
+    input:
+        [t + "/masa.fasta" for t in asr_targets if "/tkf/" in t],
 
 rule all:
     input:
@@ -120,6 +126,7 @@ rule tree_png:
         {LOAD_PYTHON}
         {PYTHON} viz/tree/visualize_trees.py --tree-file {input.tree} --output-file {output.plot}
         """
+
 #######################################################################
 #######################################################################
 # MSA
@@ -301,10 +308,10 @@ rule iqtree_model_param_search:
 
 rule tkf_indel_asr:
     input:
-        msa = MSA_PATH + "/msa.fasta",
-        tree = MSA_PATH + "/tree.nwk"
+        msa = get_msa_output("tkf") + "/msa.fasta",
+        tree = get_msa_output("tkf") + "/tree.nwk"
     output:
-        asr = get_inf_output("asr_with_true_params", "tkf_reestimate") + "/masa.fasta"
+        asr = get_inf_output_with_msa_params("asr", "tkf_reestimate", "tkf") + "/masa.fasta"
     threads: 1
     resources:
         mem_mb=4096
@@ -312,14 +319,14 @@ rule tkf_indel_asr:
         """
         mkdir -p $(dirname {output.asr})
         {INDEL_ASR} \
-            -- seq-file {input.msa} \
-            -- tree-file {input.tree} \
-            -- out-folder $(dirname {output.asr}) \
-            -- algorithm-type TKF92 \
-            -- params {wildcards.lambda} {wildcards.mu} {wildcards.r} \
-            -- seed {wildcards.seed} \
-            -- max-iterations {wildcards.max_iterations} \
-            -- epsilon {wildcards.epsilon} 
+            --seq-file {input.msa} \
+            --tree-file {input.tree} \
+            --out-folder $(dirname {output.asr}) \
+            --algorithm-type tkf92 \
+            --params {wildcards.lambda} {wildcards.mu} {wildcards.r} \
+            --seed {wildcards.seed} \
+            --max-iterations {wildcards.max_iterations} \
+            --epsilon {wildcards.epsilon} 
         """
 
 rule parsimony_indel_asr:
@@ -327,7 +334,7 @@ rule parsimony_indel_asr:
         msa = MSA_PATH + "/msa.fasta",
         tree = MSA_PATH + "/tree.nwk"
     output:
-        asr = get_inf_output("asr_with_true_params", "dollo_parsimony") + "/masa.fasta"
+        asr = get_inf_output("asr", "dollo_parsimony") + "/masa.fasta"
     threads: 1
     resources:
         mem_mb=4096
@@ -335,11 +342,36 @@ rule parsimony_indel_asr:
         """
         mkdir -p $(dirname {output.asr})
         {INDEL_ASR} \
-            -- seq-file {input.msa} \
-            -- tree-file {input.tree} \
-            -- out-folder $(dirname {output.asr}) \
-            -- algorithm-type parsimony \
-            -- seed {wildcards.seed} 
+            --seq-file {input.msa} \
+            --tree-file {input.tree} \
+            --out-folder $(dirname {output.asr}) \
+            --algorithm-type parsimony \
+            --seed {wildcards.seed} 
+        """
+
+rule tkf_indel_asr_and_params:
+    input:
+        msa = MSA_PATH + "/msa.fasta",
+        tree = MSA_PATH + "/tree.nwk"
+    output:
+        asr = get_inf_output("asr_and_params", "jati_asr_and_params") + "/masa.fasta",
+        params = get_inf_output("asr_and_params", "jati_asr_and_params") + "/params.json"
+    threads: 1
+    resources:
+        mem_mb=4096
+    shell:
+        """
+        mkdir -p $(dirname {output.asr})
+        {INDEL_ASR} \
+            --seq-file {input.msa} \
+            --tree-file {input.tree} \
+            --out-folder $(dirname {output.asr}) \
+            --algorithm-type tkf92 \
+            --params {wildcards.lambda} {wildcards.mu} {wildcards.r} \
+            --seed {wildcards.seed} \
+            --max-iterations {wildcards.max_iterations} \
+            --epsilon {wildcards.epsilon} \
+            -o # optimize params
         """
 
 #######################################################################
