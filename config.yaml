@@ -28,7 +28,6 @@ environments:
 
 # General
 seeds: [1]
-# PAML Tree Generation Parameters
 
 tree_path: "results/trees/{tree_sim_tool}/{tree_params}/seed{seed}.nwk"
 tree_sim_tools:
@@ -43,7 +42,6 @@ tree_sim_tools:
     species: [8]
     path_snippet: "s{species}"
 
-# MSA Simulation Tools & Their Parameters
 msa_dir_path: "results/msas/{tree_sim_tool}/{tree_params}/{msa_sim_tool}/{msa_params}/seed{seed}"
 msa_sim_tools:
   tkf:
@@ -94,4 +92,18 @@ tree_inf_tools:
   iqtree:
     model: ["JC"]
     path_snippet: "{model}"
+
+asr_with_true_params_dir: "results/asr/{tree_sim_tool}/{tree_params}/{msa_sim_tool}/{msa_params}/{inference_tool}/{inf_params}/seed{seed}"
+asr_tools:
+  tkf_reestimate:
+    path_snippet: "dummy"
+  dollo_parsimony:
+    path_snippet: "dummy"
+
+asr_and_params_dir: "results/asr_and_params/{tree_sim_tool}/{tree_params}/{msa_sim_tool}/{msa_params}/{inference_tool}/{inf_params}/seed{seed}"
+asr_and_params_tools:
+  jati_asr_and_params:
+    start_params: [0.03, 0.04, 0.5] 
+    max_iterations: 5
+    path_snippet: "maxiter{max_iterations}"
 

@@ -296,6 +296,8 @@ rule iqtree_model_param_search:
 #######################################################################
 #######################################################################
 
+# TODO also ouput params and msa
+
 rule jati_inference:
     input:
         msa = MSA_PATH + "/msa.fasta"

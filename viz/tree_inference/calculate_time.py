@@ -1,5 +1,6 @@
 import re
 from datetime import datetime, timedelta
+# this is not specific to tree search
 
 def parse_jati_time(log_content):
     lines = log_content.strip().splitlines()

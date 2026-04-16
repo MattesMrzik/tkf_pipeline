@@ -54,6 +54,7 @@ def main():
                 row[f"true_vs_start_nj_{dist_name}"] = dist_value
             
         # true tree lolg, ie model search under jati
+        # also nj with just presence vs absence, ie no actual chars to compare it to the tkf indel tree inference
 
         all_rows.append(row)
         all_keys.update(row.keys())
