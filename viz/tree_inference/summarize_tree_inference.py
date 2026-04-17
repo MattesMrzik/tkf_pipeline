@@ -5,11 +5,10 @@ project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-from viz.tree.utils import get_tree_params
-from viz.msa.utils import get_msa_sim_params
-from viz.tree_inference.utils import get_tree_inference_params
 from viz.utils import load_snakemake_config_yaml, get_last_line_value, add_to_ordered_set, write_table
 from utils import RESULTS_INF_DIR, all_inf_dirs, distances_for_true_vs_inferred, distances_for_true_vs_start_nj_tree
+from calculate_time import parse_jati_time, parse_iqtree_time
+from snakemake_helpers import get_tool_params
 
 def main():
     config = load_snakemake_config_yaml()
@@ -33,20 +32,21 @@ def main():
         print(f"Processing {d}...")
         
         # Extract parameters
-        t_params = get_tree_params(d, config["tree_match"])
+        t_params = get_tool_params(d, config, "tree_sim")
         add_to_ordered_set(tree_col_names, t_params.keys())
         row.update(t_params)
         
-        msa_params = get_msa_sim_params(d, config["msa_sim_tools"])
+        msa_params = get_tool_params(d, config, "msa_sim")
         add_to_ordered_set(msa_col_names, msa_params.keys())
         row.update(msa_params)
         
-        i_params = get_tree_inference_params(d, config["inference_tools"])
+        i_params = get_tool_params(d, config, "tree_inf")
         add_to_ordered_set(inf_col_names, i_params.keys())
         row.update(i_params)
         
         row.update(distances_for_true_vs_inferred(d))
-        row["runtime_seconds"] = get_last_line_value(os.path.join(d, "time.txt"))
+        log_path = os.path.join(d, "log.txt")
+        row["runtime_seconds"] = parse_jati_time(log_path) if "jati" in d else parse_iqtree_time(log_path)
         row["logl"] = get_last_line_value(os.path.join(d, "logl.out"))
         if row.get("inference_tool") == "jati":
             distances = distances_for_true_vs_start_nj_tree(d)
@@ -63,7 +63,7 @@ def main():
     remaining_cols = sorted(list(all_keys - set(column_order)))
     column_order += remaining_cols
 
-    write_table(all_rows, column_order, os.path.join(project_root, "results/summary.tsv"))
+    write_table(all_rows, column_order, os.path.join(project_root, "results/tree_inf_summary.tsv"))
 
 if __name__ == "__main__":
     main()

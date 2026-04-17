@@ -1,8 +1,10 @@
-import re
 import os
 import sys
 
-RESULTS_INF_DIR = "results/inference"
+RESULTS_DIR = "results"
+TREE_INF_DIR = "tree_inference"
+RESULTS_INF_DIR = os.path.join(RESULTS_DIR, TREE_INF_DIR)
+MSA_DIR = "msas"
 
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 if project_root not in sys.path:
@@ -17,21 +19,13 @@ def all_inf_dirs(base_dir = os.path.join(project_root, RESULTS_INF_DIR)):
             inf_dirs.append(root)
     return inf_dirs
 
-def get_tree_inference_params(path, inference_tools_config):
-    for inf_tool_name, inf_conf in inference_tools_config.items():
-        match = re.search(f'{inf_tool_name}/{inf_conf["match_regex"]}', path)
-        if match:
-            params = {"inference_tool": inf_tool_name}
-            params.update(match.groupdict())
-            return params
-    return {}
-
 def get_msa_dir_from_inf(inf_dir):
     parts = inf_dir.split(os.sep)
-    inf_idx = parts.index("inference")
+    inf_idx = parts.index(TREE_INF_DIR)
     msa_parts = list(parts)
-    msa_parts[inf_idx] = "msas"
-    msa_dir_path = os.sep.join(msa_parts[:-2])
+    msa_parts[inf_idx] = MSA_DIR
+    # the last 3 parts are tree_inf_tool, tree_inf_params and seed, we want to keep seed
+    msa_dir_path = os.sep.join(msa_parts[:-3] + [msa_parts[-1]])
     return msa_dir_path
 
 def distances_for_true_vs_inferred(d):

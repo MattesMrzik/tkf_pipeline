@@ -34,12 +34,7 @@ MSA_SIM_TOOLS = config["msa_sim"]["tools"]
 
 # apply globally
 wildcard_constraints:
-    **infer_wildcard_constraints({
-        **config["tree_sim"]["tools"],
-        **config["msa_sim"]["tools"],
-        **config["tree_inf"]["tools"],
-        **config["model_param_inf"]["tools"]
-    })
+    **infer_wildcard_constraints(config)
 
 rule all_trees:
     input:

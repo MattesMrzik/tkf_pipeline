@@ -1,123 +1,7 @@
 import numpy as np
-# import pandas as pd
-# from Bio import AlignIO
-# from Bio import Phylo
-# from io import StringIO
-#
-
-
-
-
-# the newick tree form alisim has internal node labels that we can use
-
-
-
-
-
-# def get_clade_label(node):
-#     """
-#     Generate a label for a node by concatenating its leaf labels.
-#     If it's a leaf, just returns the leaf name.
-#     """
-#     if node.is_terminal():
-#         return node.name
-#     # Sort to ensure consistent labeling
-#     leaves = sorted([leaf.name for leaf in node.get_terminals()])
-#     return "_".join(leaves)
-#
-# def collect_indels_from_alignment(msa_path, tree_path):
-#     """
-#     Collects insertion and deletion events by comparing parent and child sequences
-#     along the tree. Assumes ancestral sequences are present in the MSA with names
-#     matching the tree's node names (or labels).
-#     """
-#     alignment = AlignIO.read(msa_path, "fasta")
-#     seq_dict = {record.id: str(record.seq) for record in alignment}
-#     
-#     tree = Phylo.read(tree_path, "newick")
-#     
-#     events = []
-#     
-#     # Traverse the tree from root
-#     for parent in tree.find_clades(order='level'):
-#         parent_label = parent.name # Assumes alignment IDs match node names
-#         if parent_label not in seq_dict:
-#             # If internal nodes don't have names in the tree, we might need 
-#             # to handle how simulation tools (like JATI/simulate_tkf) label them.
-#             # For now, assume they are there.
-#             continue
-#             
-#         parent_seq = seq_dict[parent_label]
-#         
-#         for child in parent.clades:
-#             child_label = child.name
-#             if child_label not in seq_dict:
-#                 continue
-#                 
-#             child_seq = seq_dict[child_label]
-#             clade_label = get_clade_label(child)
-#             
-#             # Compare parent and child sequences
-#             # 1. Ignore positions where both are gaps
-#             # 2. Find stretches: parent gap, child char (Insertion)
-#             # 3. Find stretches: parent char, child gap (Deletion)
-#             
-#             in_insertion = False
-#             insertion_start = 0
-#             in_deletion = False
-#             deletion_start = 0
-#             
-#             seq_len = len(parent_seq)
-#             for i in range(seq_len):
-#                 p_char = parent_seq[i]
-#                 c_char = child_seq[i]
-#                 
-#                 # Both gaps - ignore
-#                 if p_char == '-' and c_char == '-':
-#                     # If we were in an event, it ends here because we only look for
-#                     # parent char vs child gap or vice versa.
-#                     if in_insertion:
-#                         events.append({'type': 'insertion', 'length': i - insertion_start, 'node': clade_label})
-#                         in_insertion = False
-#                     if in_deletion:
-#                         events.append({'type': 'deletion', 'length': i - deletion_start, 'node': clade_label})
-#                         in_deletion = False
-#                     continue
-#                 
-#                 # Check for Insertion (Parent gap, Child char)
-#                 if p_char == '-' and c_char != '-':
-#                     if not in_insertion:
-#                         in_insertion = True
-#                         insertion_start = i
-#                     if in_deletion:
-#                         events.append({'type': 'deletion', 'length': i - deletion_start, 'node': clade_label})
-#                         in_deletion = False
-#                 
-#                 # Check for Deletion (Parent char, Child gap)
-#                 elif p_char != '-' and c_char == '-':
-#                     if not in_deletion:
-#                         in_deletion = True
-#                         deletion_start = i
-#                     if in_insertion:
-#                         events.append({'type': 'insertion', 'length': i - insertion_start, 'node': clade_label})
-#                         in_insertion = False
-#                 
-#                 # Both chars (match/mismatch)
-#                 else:
-#                     if in_insertion:
-#                         events.append({'type': 'insertion', 'length': i - insertion_start, 'node': clade_label})
-#                         in_insertion = False
-#                     if in_deletion:
-#                         events.append({'type': 'deletion', 'length': i - deletion_start, 'node': clade_label})
-#                         in_deletion = False
-#             
-#             # Close pending events at the end of the sequence
-#             if in_insertion:
-#                 events.append({'type': 'insertion', 'length': seq_len - insertion_start, 'node': clade_label})
-#             if in_deletion:
-#                 events.append({'type': 'deletion', 'length': seq_len - deletion_start, 'node': clade_label})
-#                 
-#     return pd.DataFrame(events)
+import re
+import math
+from collections import Counter
 
 def gap_concentration(df):
     df['gap_concentration'] = np.where(
@@ -126,3 +10,99 @@ def gap_concentration(df):
         0
     )
     return df
+
+def get_fasta_length(sequences):
+    """Returns the length of the first sequence in the FASTA."""
+    return len(sequences[0])
+
+def get_sequences(msa_path):
+    """Utility to read sequences from a FASTA file."""
+    sequences = []
+    with open(msa_path, 'r') as f:
+        current_seq = []
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            if line.startswith(">"):
+                if current_seq:
+                    sequences.append("".join(current_seq))
+                current_seq = []
+            else:
+                current_seq.append(line)
+        if current_seq:
+            sequences.append("".join(current_seq))
+    return sequences
+
+def get_gap_stats(sequences):
+    """Calculates comprehensive gap statistics for an MSA."""
+    try:
+        if not sequences:
+            return {"gap%": "NA", "gap_col%": "NA", "avg_gap_len": "NA"}
+
+        msa_len = len(sequences[0])
+        num_seqs = len(sequences)
+        total_chars = msa_len * num_seqs
+        
+        total_gaps = 0
+        gap_columns = 0
+        gap_events_count = 0
+        
+        # Column-wise check for gaps
+        for j in range(msa_len):
+            has_gap = False
+            for i in range(num_seqs):
+                if sequences[i][j] == '-':
+                    has_gap = True
+                    total_gaps += 1
+            if has_gap:
+                gap_columns += 1
+        
+        # Row-wise check for gap events (to calculate average gap length)
+        for seq in sequences:
+            # Find all continuous blocks of '-'
+            gap_events = re.findall(r'-+', seq)
+            gap_events_count += len(gap_events)
+
+        gap_pct = (total_gaps / total_chars * 100) if total_chars > 0 else 0
+        gap_col_pct = (gap_columns / msa_len * 100) if msa_len > 0 else 0
+        avg_gap_len = (total_gaps / gap_events_count) if gap_events_count > 0 else 0
+
+        return {
+            "gap%": round(gap_pct, 2),
+            "gap_col%": round(gap_col_pct, 2),
+            "avg_gap_len": round(avg_gap_len, 2)
+        }
+    except Exception:
+        pass
+    return {"gap%": "NA", "gap_col%": "NA", "avg_gap_len": "NA"}
+
+def calculate_gap_free_entropy(sequences):
+    """Calculates the average Shannon entropy over all gap-free columns."""
+    try:
+        if not sequences:
+            return "NA"
+            
+        msa_len = len(sequences[0])
+        num_seqs = len(sequences)
+        
+        entropies = []
+        for j in range(msa_len):
+            col = [sequences[i][j] for i in range(num_seqs)]
+            if '-' in col:
+                continue
+            
+            # Calculate Shannon Entropy for the column
+            counts = Counter(col)
+            entropy = 0.0
+            for char in counts:
+                p = counts[char] / num_seqs
+                entropy -= p * math.log2(p)
+            entropies.append(entropy)
+            
+        if not entropies:
+            return 0.0
+            
+        return round(sum(entropies) / len(entropies), 4)
+    except Exception:
+        return "NA"

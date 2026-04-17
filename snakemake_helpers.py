@@ -1,8 +1,18 @@
 from itertools import product
-from viz.utils import load_snakemake_config_yaml
+import re
+
 from snakemake.io import expand
 
-def infer_wildcard_constraints(cfg_dict):
+from viz.utils import load_snakemake_config_yaml
+
+def infer_wildcard_constraints(config):
+    tools = {}
+    for candidate in config.values():
+        if isinstance(candidate, dict) and "tools" in candidate:
+            tools.update(candidate["tools"])
+    return infer_wildcard_constraints_flat(tools)
+
+def infer_wildcard_constraints_flat(cfg_dict):
     constraints = {"seed": r"\d+"}
     for tool_name, tool_cfg in cfg_dict.items():
         for k, v in tool_cfg.items():
@@ -109,3 +119,19 @@ def get_inf_output_with_msa_params(tool_type, tool_name, msa_tool_name):
     snippet = tool_conf.get("path_snippet", tool_name)
     msa_snippet = config["msa_sim"]["tools"][msa_tool_name].get("path_snippet", msa_tool_name)
     return config[tool_type]["dir"].replace("{inference_tool}", tool_name).replace("{inf_params}", snippet).replace("{msa_params}", msa_snippet)
+
+def get_tool_params(path, config, tool_key):
+    wc_constraints = infer_wildcard_constraints(config)
+    tools = config[tool_key]["tools"]
+    for tool_name, tool_conf in tools.items():
+        search_pattern = f'{tool_name}/{tool_conf["path_snippet"]}'
+        for replace_match in re.finditer(r"\{(\w+)\}", tool_conf["path_snippet"]):
+            wc_name = replace_match.group(1)
+            wc_pattern = wc_constraints.get(wc_name, r"[^_/]+")
+            search_pattern = search_pattern.replace(f"{{{wc_name}}}", f"(?P<{wc_name}>{wc_pattern})")
+        match = re.search(search_pattern, path)
+        if match:
+            params = {tool_key: tool_name}
+            params.update(match.groupdict())
+            return params
+    return {}

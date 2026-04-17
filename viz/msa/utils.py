@@ -1,4 +1,3 @@
-import re
 import os
 import sys
 
@@ -14,12 +13,3 @@ def all_msa_dirs(base_dir = os.path.join(project_root, RESULTS_MSA_DIR)):
         if "msa.fasta" in files:
             msa_dirs.append(root)
     return msa_dirs
-
-def get_msa_sim_params(path, msa_sim_tools_config):
-    for tool_name, tool_conf in msa_sim_tools_config.items():
-        match = re.search(f'{tool_name}/{tool_conf["match_regex"]}', path)
-        if match:
-            params = {"msa_sim_tool": tool_name}
-            params.update(match.groupdict())
-            return params
-    return {}
