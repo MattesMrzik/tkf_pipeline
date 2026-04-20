@@ -5,12 +5,11 @@ project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-from viz.indel_points_inference.utils import load_msa, load_tree, infer_indels, IndelEvents, EventType
-
+from viz.indel_points_inference.utils import load_msa, load_tree, infer_indels, EventType
 
 def test_infer_indels():
     base_dir = os.path.join(os.path.dirname(__file__), "data")
-    msa_path = os.path.join(base_dir, "msa.fasta")
+    msa_path = os.path.join(base_dir, "true_msa.fasta")
     tree_path = os.path.join(base_dir, "tree.nwk")
 
     msa = load_msa(msa_path)
@@ -52,7 +51,6 @@ def test_infer_indels():
     assert "B2" in nodes
 
     print("All tests passed!")
-
 
 if __name__ == "__main__":
     test_infer_indels()
