@@ -44,7 +44,7 @@ def compare_indel_annotations(
     if long_nit > 0 or long_ndt > 0:
         nom = ((long_nit - long_nie) ** 2 + (long_ndt - long_nde) ** 2)
         denom = long_nit**2 + long_ndt**2
-        long_annotation_agreement = (nom / denom) ** 0.5
+        long_indel_agreement = (nom / denom) ** 0.5
     else:
         long_indel_agreement = 0.0
 

@@ -4,7 +4,6 @@ from enum import Enum
 from typing import Dict, List, Set, Optional
 from intervaltree import IntervalTree
 
-
 class EventType(Enum):
     INSERTION = "insertion"
     DELETION = "deletion"
@@ -19,7 +18,6 @@ class IndelEvent:
 
     def overlaps_column(self, col: int) -> bool:
         return self.start <= col < self.end
-
 
 class IndelEvents:
     def __init__(self, events: Optional[List[IndelEvent]] = None):
@@ -62,6 +60,18 @@ class IndelEvents:
     def count_by_type(self, event_type: EventType) -> int:
         return sum(1 for e in self.events if e.event_type == event_type)
 
+    def split_to_single_site(self) -> "IndelEvents":
+        new_events = IndelEvents()
+        for event in self.events:
+            for col in range(event.start, event.end):
+                new_events.add(IndelEvent(
+                    node=event.node,
+                    start=col,
+                    end=col + 1,
+                    event_type=event.event_type,
+                ))
+        return new_events
+
 
 def infer_indels(msa: Dict[str, str], tree: dendropy.Tree) -> IndelEvents:
     events = IndelEvents()
@@ -99,8 +109,6 @@ def infer_indels(msa: Dict[str, str], tree: dendropy.Tree) -> IndelEvents:
                 i += 1
 
     return events
-
-
 
 def load_tree(newick_path: str) -> dendropy.Tree:
     return dendropy.Tree.get(
