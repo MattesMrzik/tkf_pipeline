@@ -70,7 +70,7 @@ model_param_inf:
         - {model: "jc69", gap: "Missing"}
         - {model: "NONE", gap: "TKF92"}
       epsilon: 1e-5
-      params: [0.03, 0.04, 0.5]
+      max_iterations: 5
       path_snippet: "{model}_{gap}"
     iqtree_model_param_search:
       model: ["JC"]
@@ -80,7 +80,6 @@ tree_inf:
   dir: "results/tree_inference/{tree_sim_tool}/{tree_params}/{msa_sim_tool}/{msa_params}/{inference_tool}/{inf_params}/seed{seed}"
   tools:
     jati:
-      params: [0.03, 0.04, 0.5]
       model_gap_move:
         - {model: "jc69", gap: "PIP", move: "NNI"}
         - {model: "jc69", gap: "Missing", move: "NNI"}
@@ -89,6 +88,7 @@ tree_inf:
         - {model: "jc69", gap: "TKF92", move: "NNI"}
         - {model: "NONE", gap: "TKF92", move: "NNI"}
       max_iterations: 5
+      # check to add all params to the path snippet. perhaps just not starting params that will be set by default values id the slice is merged. Ahh the slice is already merged. i can remove it and alsi adjust the jati bin
       path_snippet: "{model}_{gap}_{move}"
     iqtree:
       model: ["JC"]

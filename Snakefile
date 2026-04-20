@@ -58,11 +58,21 @@ rule all_tree_pngs:
     input:
         [p.replace(".nwk", ".png") for p in rules.all_trees.input]
 
-asr_targets = make_targets(config, "tree_sim", "msa_sim", primary="asr")
-asr_targets += make_targets(config, "tree_sim", "msa_sim", primary="asr_and_params")
-rule all_asrs:
+asr = make_targets(config, "tree_sim", "msa_sim", primary="asr")
+asr_and_params = make_targets(config, "tree_sim", "msa_sim", primary="asr_and_params")
+rule all_tkf_asrs:
     input:
-        [t + "/masa.fasta" for t in asr_targets if "/tkf/" in t],
+        [t + "/masa.fasta" for t in asr + asr_and_params if "/tkf/" in t],
+
+rule all_tkf_asr_and_params:
+    input:
+        [t + "/masa.fasta" for t in asr_and_params if "/tkf/" in t],
+        [t + "/params.json" for t in asr_and_params if "/tkf/" in t]
+
+rule all_asr_and_params:
+    input:
+        [t + "/masa.fasta" for t in asr_and_params],
+        [t + "/params.json" for t in asr_and_params]
 
 rule all:
     input:
@@ -253,8 +263,9 @@ rule jati_model_param_search:
         mem_mb=4096
     params:
         epsilon = MODEL_PARAMS_INF_TOOLS["jati_model_param_search"]["epsilon"],
+        # TODO here i should also use the wildcads of the path and not acces this parameter in 
+        # (ie epsilon) in this above fashion. also add the maxiterantosn and eopxilon the the pathsnippet for that
         seq_file = lambda wc, input: input.masa if wc.gap == "TKF92" else input.msa,
-        paras = " ".join(map(str, MODEL_PARAMS_INF_TOOLS["jati_model_param_search"]["params"])),
         out_base = get_inf_output("model_param_inf", "jati_model_param_search")
     shell:
         """
@@ -265,7 +276,6 @@ rule jati_model_param_search:
             --seq-file {params.seq_file} \
             --tree-file {input.tree} \
             --model {wildcards.model} \
-            --params {params.paras} \
             --gap-handling {wildcards.gap} \
             --epsilon {params.epsilon} \
             --seed {wildcards.seed} \
@@ -392,7 +402,6 @@ rule jati_inference:
     resources:
         mem_mb=4096
     params:
-        paras = " ".join(map(str, TREE_INF_TOOLS["jati"]["params"])),
         max_iterations = TREE_INF_TOOLS["jati"]["max_iterations"],
         out_base = get_inf_output("tree_inf", "jati"),
         force_nni = lambda wildcards: "--force-nni" if wildcards.move == "NNI" else ""
@@ -404,7 +413,6 @@ rule jati_inference:
             --out-folder {params.out_base} \
             --seq-file {input.msa} \
             --model {wildcards.model} \
-            --params {params.paras} \
             --gap-handling {wildcards.gap} \
             {params.force_nni} \
             --seed {wildcards.seed} \
