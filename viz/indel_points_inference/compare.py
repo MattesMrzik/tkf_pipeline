@@ -1,15 +1,14 @@
 import os
 import sys
+import dendropy
+from typing import Dict
 
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-import dendropy
-from typing import Dict
-
+from viz.msa.utils import load_msa
 from viz.indel_points_inference.utils import (
-    load_msa,
     load_tree,
     infer_indels,
     EventType,
@@ -23,35 +22,40 @@ def compare_indel_annotations(
     true_events = infer_indels(true_msa, tree)
     inferred_events = infer_indels(inferred_msa, tree)
 
-    true_set = set((e.node, e.start, e.end, e.event_type) for e in true_events.events)
-    inferred_set = set((e.node, e.start, e.end, e.event_type) for e in inferred_events.events)
+    true_set = set(true_events.events)
+    inferred_set = set(inferred_events.events)
 
     matched_true = true_set & inferred_set
-    # unmatched_true = true_set - inferred_set
 
-    nit = sum(1 for e in true_events.events if e.event_type == EventType.INSERTION)
-    ndt = sum(1 for e in true_events.events if e.event_type == EventType.DELETION)
-    nie = sum(1 for e in inferred_events.events if e.event_type == EventType.INSERTION)
-    nde = sum(1 for e in inferred_events.events if e.event_type == EventType.DELETION)
+    long_nit = true_events.count_by_type(EventType.INSERTION)
+    long_ndt = true_events.count_by_type(EventType.DELETION)
+    long_nie = inferred_events.count_by_type(EventType.INSERTION)
+    long_nde = inferred_events.count_by_type(EventType.DELETION)
 
-    annotation_agreement = len(matched_true) / len(true_set) if len(true_set) > 0 else 0.0
+    long_annotation_agreement = len(matched_true) / len(true_set) if len(true_set) > 0 else 0.0
 
-    if ndt > 0 and nie > 0 and nde > 0:
-        true_ratio = nit / ndt
-        est_ratio = nie / nde
-        indel_ratio = true_ratio / est_ratio
+    if long_ndt > 0 and long_nie > 0 and long_nde > 0:
+        true_ratio = long_nit / long_ndt
+        est_ratio = long_nie / long_nde
+        long_indel_ratio = true_ratio / est_ratio
     else:
-        indel_ratio = float("nan")
+        long_indel_ratio = float("nan")
 
-    if nit > 0 or ndt > 0:
-        indel_agreement = ((nit - nie) ** 2 + (ndt - nde) ** 2) ** 0.5 / (nit**2 + ndt**2) ** 0.5
+    if long_nit > 0 or long_ndt > 0:
+        nom = ((long_nit - long_nie) ** 2 + (long_ndt - long_nde) ** 2)
+        denom = long_nit**2 + long_ndt**2
+        long_annotation_agreement = (nom / denom) ** 0.5
     else:
-        indel_agreement = 0.0
+        long_indel_agreement = 0.0
 
     return {
-        "annotation_agreement": annotation_agreement,
-        "indel_ratio": indel_ratio,
-        "indel_agreement": indel_agreement,
+        "long_annotation_agreement": long_annotation_agreement,
+        "long_indel_ratio": long_indel_ratio,
+        "long_indel_agreement": long_indel_agreement,
+        "long_nit": long_nit,
+        "long_ndt": long_ndt,
+        "long_nie": long_nie,
+        "long_nde": long_nde,
     }
 
 

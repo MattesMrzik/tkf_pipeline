@@ -7,8 +7,8 @@ project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-from viz.msa.msa_features import get_fasta_length, get_gap_stats, calculate_gap_free_entropy, get_sequences
-from viz.msa.utils import all_msa_dirs
+from viz.msa.msa_features import get_fasta_length, get_gap_stats, calculate_gap_free_entropy
+from viz.msa.utils import all_msa_dirs, load_msa
 from viz.utils import load_snakemake_config_yaml, add_to_ordered_set, write_table
 from viz.msa.utils import RESULTS_MSA_DIR
 from snakemake_helpers import get_tool_params
@@ -43,10 +43,10 @@ def main():
         row["msa_path"] = msa_path
 
         # Summary statistics about the MSA
-        seqs = get_sequences(msa_path)
-        row["msa_len"] = get_fasta_length(seqs)
-        row.update(get_gap_stats(seqs))
-        row["avg_gap_free_entropy"] = calculate_gap_free_entropy(seqs)
+        msa = load_msa(msa_path)
+        row["msa_len"] = get_fasta_length(msa)
+        row.update(get_gap_stats(msa))
+        row["avg_gap_free_entropy"] = calculate_gap_free_entropy(msa)
             
         all_rows.append(row)
         all_keys.update(row.keys())

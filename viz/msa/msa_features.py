@@ -15,25 +15,6 @@ def get_fasta_length(sequences):
     """Returns the length of the first sequence in the FASTA."""
     return len(sequences[0])
 
-def get_sequences(msa_path):
-    """Utility to read sequences from a FASTA file."""
-    sequences = []
-    with open(msa_path, 'r') as f:
-        current_seq = []
-        for line in f:
-            line = line.strip()
-            if not line:
-                continue
-            if line.startswith(">"):
-                if current_seq:
-                    sequences.append("".join(current_seq))
-                current_seq = []
-            else:
-                current_seq.append(line)
-        if current_seq:
-            sequences.append("".join(current_seq))
-    return sequences
-
 def get_gap_stats(sequences):
     """Calculates comprehensive gap statistics for an MSA."""
     try:
