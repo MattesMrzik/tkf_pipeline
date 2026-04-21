@@ -34,7 +34,7 @@ def kimIndelignProbabilisticFramework2007(suffix,
                                           inferred_set: Set[IndelEvent],
                                           true_events: IndelEvents,
                                           inferred_events: IndelEvents
-                                          ) -> Dict[str, float]:
+                                         ) -> Dict[str, float]:
     row = {}
     matched_true = true_set & inferred_set
 
@@ -90,6 +90,15 @@ def short_insertion_statistics(true_events: IndelEvents, inferred_events: IndelE
                     if true_event.event_type == EventType.INSERTION:
                         ins_step_diff.append(abs(inf_event.distance_steps - true_event.distance_steps))
                         ins_len_diff.append(abs(inf_event.distance_length - true_event.distance_length))
+    # there can also be an insertion in the true that is not in the inferred.
+    for true_event in true_events.events:
+        if true_event.event_type == EventType.INSERTION:
+            inferred_events_at_pos = inferred_events.get_by_column(true_event.start)
+            if len(inferred_events_at_pos) == 0 or all(e.event_type != EventType.INSERTION for e in inferred_events_at_pos):
+                # therefore we have a char at the root 
+                ins_step_diff_root_ins_at_inf.append(-true_event.distance_steps)
+                ins_len_diff_root_ins_at_inf.append(-true_event.distance_length)
+
     if len(ins_step_diff) > 0:
         print(f"insertion step differences: {ins_step_diff}")
         row[f"{suffix}_ins_step_diff_mean"] = sum(ins_step_diff) / len(ins_step_diff)
@@ -99,15 +108,6 @@ def short_insertion_statistics(true_events: IndelEvents, inferred_events: IndelE
         row[f"{suffix}_ins_step_diff_root_ins_at_true_mean"] = sum(ins_step_diff_root_ins_at_true) / len(ins_step_diff_root_ins_at_true)
         row[f"{suffix}_ins_len_diff_root_ins_at_true_mean"] = sum(ins_len_diff_root_ins_at_true) / len(ins_len_diff_root_ins_at_true)
         row[f"{suffix}_ins_root_ins_at_true_n"] = len(ins_step_diff_root_ins_at_true)
-
-    # there can also be an insertion in the true that is not in the inferred.
-    for true_event in true_events.events:
-        if true_event.event_type == EventType.INSERTION:
-            inferred_events_at_pos = inferred_events.get_by_column(true_event.start)
-            if len(inferred_events_at_pos) == 0 or all(e.event_type != EventType.INSERTION for e in inferred_events_at_pos):
-                # therefore we have a char at the root 
-                ins_step_diff_root_ins_at_inf.append(-true_event.distance_steps)
-                ins_len_diff_root_ins_at_inf.append(-true_event.distance_length)
     if len(ins_step_diff_root_ins_at_inf) > 0:
         row[f"{suffix}_ins_step_diff_root_ins_at_inf_mean"] = sum(ins_step_diff_root_ins_at_inf) / len(ins_step_diff_root_ins_at_inf)
         row[f"{suffix}_ins_len_diff_root_ins_at_inf_mean"] = sum(ins_len_diff_root_ins_at_inf) / len(ins_len_diff_root_ins_at_inf)

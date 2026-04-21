@@ -30,11 +30,15 @@ def test_compare_indel_annotations():
 
     assert result["short_ins_step_diff_mean"] == 1/6
     assert result["short_ins_len_diff_mean"] == 2/6
+    assert result["short_ins_n"] == 6
     assert result["short_ins_step_diff_root_ins_at_true_mean"] == 1
     assert result["short_ins_len_diff_root_ins_at_true_mean"] == 7
+    assert result["short_ins_root_ins_at_true_n"] == 1
     assert result["short_ins_step_diff_root_ins_at_inf_mean"] == -2
     assert result["short_ins_len_diff_root_ins_at_inf_mean"] == -3 -5 
     assert result["short_ins_root_ins_at_inf_n"] == 3
+
+    assert result["short_nie"] == result["short_ins_root_ins_at_true_n"] + result["short_ins_n"]
 
     print("All tests passed!")
 
