@@ -15,6 +15,8 @@ class IndelEvent:
     start: int
     end: int
     event_type: EventType
+    distance_steps: float = 0.0
+    distance_length: float = 0.0
 
     def overlaps_column(self, col: int) -> bool:
         return self.start <= col < self.end
@@ -72,6 +74,19 @@ class IndelEvents:
                 ))
         return new_events
 
+# TODO: if run-time becomes an issue, we can optimize this by caching distances to root for all nodes in the tree.
+def _compute_distance_to_root(node: dendropy.Node) -> tuple:
+    steps = 0
+    length = 0.0
+    current = node
+    # we are checking is label since dendropy might create an extra dummy root node
+    while current.parent_node.label is not None:
+        steps += 1
+        if current.edge_length is not None:
+            length += current.edge_length
+        current = current.parent_node
+    return (steps, length)
+
 
 def infer_indels(msa: Dict[str, str], tree: dendropy.Tree) -> IndelEvents:
     events = IndelEvents()
@@ -91,6 +106,8 @@ def infer_indels(msa: Dict[str, str], tree: dendropy.Tree) -> IndelEvents:
         child_seq = node_to_seq[node.label]
         parent_seq = node_to_seq[parent_label]
 
+        distance_steps, distance_length = _compute_distance_to_root(node)
+
         i = 0
         while i < msa_len:
             if parent_seq[i] == "-" and child_seq[i] != "-":
@@ -98,13 +115,27 @@ def infer_indels(msa: Dict[str, str], tree: dendropy.Tree) -> IndelEvents:
                 while i < msa_len and parent_seq[i] == "-" and child_seq[i] != "-":
                     i += 1
                 end = i
-                events.add(IndelEvent(node=node.label, start=start, end=end, event_type=EventType.INSERTION))
+                events.add(IndelEvent(
+                    node=node.label,
+                    start=start,
+                    end=end,
+                    event_type=EventType.INSERTION,
+                    distance_steps=distance_steps,
+                    distance_length=distance_length
+                    ))
             elif parent_seq[i] != "-" and child_seq[i] == "-":
                 start = i
                 while i < msa_len and parent_seq[i] != "-" and child_seq[i] == "-":
                     i += 1
                 end = i
-                events.add(IndelEvent(node=node.label, start=start, end=end, event_type=EventType.DELETION))
+                events.add(IndelEvent(
+                    node=node.label,
+                    start=start,
+                    end=end,
+                    event_type=EventType.DELETION,
+                    distance_steps=distance_steps,
+                    distance_length=distance_length
+                    ))
             else:
                 i += 1
 
