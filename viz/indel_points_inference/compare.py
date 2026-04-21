@@ -1,5 +1,6 @@
 import dendropy
-from typing import Dict, Set
+import statistics
+from typing import Dict, List, Set
 
 from viz.msa.utils import load_msa
 from viz.indel_points_inference.utils import (
@@ -63,11 +64,45 @@ def kimIndelignProbabilisticFramework2007(suffix,
         row[f"{suffix}_indel_agreement"] = (nom / denom) ** 0.5
     return row
 
-def _compute_diff_stats(step_diffs: list, len_diffs: list, prefix: str, row: dict) -> None:
-    if len(step_diffs) > 0:
-        row[f"{prefix}_step_diff_mean"] = sum(step_diffs) / len(step_diffs)
-        row[f"{prefix}_len_diff_mean"] = sum(len_diffs) / len(len_diffs)
-        row[f"{prefix}_n"] = len(step_diffs)
+def _compute_diff_stats(step_diffs: List[float], len_diffs: List[float], prefix: str, row: dict) -> None:
+    if len(step_diffs) == 0:
+        return
+
+    row[f"{prefix}_step_diff_mean"] = statistics.mean(step_diffs)
+    row[f"{prefix}_step_diff_median"] = statistics.median(step_diffs)
+    if len(step_diffs) > 1:
+        row[f"{prefix}_step_diff_stdev"] = statistics.stdev(step_diffs)
+    row[f"{prefix}_step_diff_min"] = min(step_diffs)
+    row[f"{prefix}_step_diff_max"] = max(step_diffs)
+    quartiles = statistics.quantiles(step_diffs, n=4)
+    row[f"{prefix}_step_diff_q25"] = quartiles[0]
+    row[f"{prefix}_step_diff_q75"] = quartiles[2]
+
+    positive_step = [d for d in step_diffs if d > 0]
+    negative_step = [d for d in step_diffs if d < 0]
+    if positive_step:
+        row[f"{prefix}_step_diff_positive_mean"] = statistics.mean(positive_step)
+    if negative_step:
+        row[f"{prefix}_step_diff_negative_mean"] = statistics.mean(negative_step)
+
+    row[f"{prefix}_len_diff_mean"] = statistics.mean(len_diffs)
+    row[f"{prefix}_len_diff_median"] = statistics.median(len_diffs)
+    if len(len_diffs) > 1:
+        row[f"{prefix}_len_diff_stdev"] = statistics.stdev(len_diffs)
+    row[f"{prefix}_len_diff_min"] = min(len_diffs)
+    row[f"{prefix}_len_diff_max"] = max(len_diffs)
+    quartiles = statistics.quantiles(len_diffs, n=4)
+    row[f"{prefix}_len_diff_q25"] = quartiles[0]
+    row[f"{prefix}_len_diff_q75"] = quartiles[2]
+
+    positive_len = [d for d in len_diffs if d > 0]
+    negative_len = [d for d in len_diffs if d < 0]
+    if positive_len:
+        row[f"{prefix}_len_diff_positive_mean"] = statistics.mean(positive_len)
+    if negative_len:
+        row[f"{prefix}_len_diff_negative_mean"] = statistics.mean(negative_len)
+
+    row[f"{prefix}_n"] = len(step_diffs)
 
 
 # For insertions we look if they are higher or lower than the true events
@@ -95,8 +130,8 @@ def short_insertion_statistics(true_events: IndelEvents, inferred_events: IndelE
                 # we have a true event at this position, so we look at the difference in steps and length
                 for true_event in true_events_at_pos:
                     if true_event.event_type == EventType.INSERTION:
-                        ins_step_diff.append(abs(inf_event.distance_steps - true_event.distance_steps))
-                        ins_len_diff.append(abs(inf_event.distance_length - true_event.distance_length))
+                        ins_step_diff.append(inf_event.distance_steps - true_event.distance_steps)
+                        ins_len_diff.append(inf_event.distance_length - true_event.distance_length)
     # there can also be an insertion in the true that is not in the inferred.
     for true_event in true_events.events:
         if true_event.event_type == EventType.INSERTION:
