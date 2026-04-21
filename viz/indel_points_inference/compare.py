@@ -12,7 +12,53 @@ from viz.indel_points_inference.utils import (
     load_tree,
     infer_indels,
     EventType,
+    IndelEvents,
 )
+
+def _compute_indel_measures(
+    true_events: IndelEvents,
+    inferred_events: IndelEvents,
+    suffix: str,
+) -> Dict[str, float]:
+    true_set = set(true_events.events)
+    inferred_set = set(inferred_events.events)
+
+    matched_true = true_set & inferred_set
+
+    nit = true_events.count_by_type(EventType.INSERTION)
+    ndt = true_events.count_by_type(EventType.DELETION)
+    nie = inferred_events.count_by_type(EventType.INSERTION)
+    nde = inferred_events.count_by_type(EventType.DELETION)
+
+    # see kimIndelignProbabilisticFramework2007, best 1
+    annotation_agreement = len(matched_true) / len(true_set) if len(true_set) > 0 else 0.0
+
+    if ndt > 0 and nie > 0 and nde > 0:
+        true_ratio = nit / ndt
+        est_ratio = nie / nde
+        # see kimIndelignProbabilisticFramework2007, best 1
+        indel_ratio = true_ratio / est_ratio
+    else:
+        indel_ratio = float("nan")
+
+    if nit > 0 or ndt > 0:
+        nom = ((nit - nie) ** 2 + (ndt - nde) ** 2)
+        denom = nit**2 + ndt**2
+        # see kimIndelignProbabilisticFramework2007, best 0
+        indel_agreement = (nom / denom) ** 0.5
+    else:
+        indel_agreement = 0.0
+
+    return {
+        f"{suffix}_annotation_agreement": annotation_agreement,
+        f"{suffix}_indel_ratio": indel_ratio,
+        f"{suffix}_indel_agreement": indel_agreement,
+        f"{suffix}_nit": nit,
+        f"{suffix}_ndt": ndt,
+        f"{suffix}_nie": nie,
+        f"{suffix}_nde": nde,
+    }
+
 
 def compare_indel_annotations(
     tree: dendropy.Tree,
@@ -21,42 +67,13 @@ def compare_indel_annotations(
 ) -> Dict[str, float]:
     true_events = infer_indels(true_msa, tree)
     inferred_events = infer_indels(inferred_msa, tree)
+    long_measures = _compute_indel_measures(true_events, inferred_events, "long")
 
-    true_set = set(true_events.events)
-    inferred_set = set(inferred_events.events)
+    true_short = true_events.split_to_single_site()
+    inferred_short = inferred_events.split_to_single_site()
+    short_measures = _compute_indel_measures(true_short, inferred_short, "short")
 
-    matched_true = true_set & inferred_set
-
-    long_nit = true_events.count_by_type(EventType.INSERTION)
-    long_ndt = true_events.count_by_type(EventType.DELETION)
-    long_nie = inferred_events.count_by_type(EventType.INSERTION)
-    long_nde = inferred_events.count_by_type(EventType.DELETION)
-
-    long_annotation_agreement = len(matched_true) / len(true_set) if len(true_set) > 0 else 0.0
-
-    if long_ndt > 0 and long_nie > 0 and long_nde > 0:
-        true_ratio = long_nit / long_ndt
-        est_ratio = long_nie / long_nde
-        long_indel_ratio = true_ratio / est_ratio
-    else:
-        long_indel_ratio = float("nan")
-
-    if long_nit > 0 or long_ndt > 0:
-        nom = ((long_nit - long_nie) ** 2 + (long_ndt - long_nde) ** 2)
-        denom = long_nit**2 + long_ndt**2
-        long_indel_agreement = (nom / denom) ** 0.5
-    else:
-        long_indel_agreement = 0.0
-
-    return {
-        "long_annotation_agreement": long_annotation_agreement,
-        "long_indel_ratio": long_indel_ratio,
-        "long_indel_agreement": long_indel_agreement,
-        "long_nit": long_nit,
-        "long_ndt": long_ndt,
-        "long_nie": long_nie,
-        "long_nde": long_nde,
-    }
+    return {**long_measures, **short_measures}
 
 
 def compare_from_files(

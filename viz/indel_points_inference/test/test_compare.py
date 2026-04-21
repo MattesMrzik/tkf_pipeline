@@ -18,18 +18,21 @@ def test_compare_indel_annotations():
 
     result = compare_from_files(tree_path, true_msa_path, inferred_msa_path)
 
-    print(f"Annotation agreement: {result['long_annotation_agreement']}")
-    print(f"Indel ratio: {result['long_indel_ratio']}")
-    print(f"Indel agreement: {result['long_indel_agreement']}")
-    print(f"long_nit={result['long_nit']}, long_ndt={result['long_ndt']}, long_nie={result['long_nie']}, long_nde={result['long_nde']}")
-
-    assert result["long_annotation_agreement"] == 0.0
-    assert result["long_indel_ratio"] == 0.75
-    assert result["long_indel_agreement"] > 0.3
     assert result["long_nit"] == 3
     assert result["long_ndt"] == 1
-    assert result["long_nie"] == 4
+    assert result["long_nie"] == 3
     assert result["long_nde"] == 1
+    assert result["long_annotation_agreement"] == 0.0
+    assert result["long_indel_ratio"] == 1
+    assert result["long_indel_agreement"] == 0
+
+    assert result["short_nit"] == 9
+    assert result["short_ndt"] == 1
+    assert result["short_nie"] == 9
+    assert result["short_nde"] == 3
+    assert result["short_annotation_agreement"] == 5/10
+    assert result["short_indel_ratio"] == 9/3
+    assert result["short_indel_agreement"] == (4/82) ** 0.5
 
     tree = load_tree(tree_path)
     true_msa = load_msa(true_msa_path)
