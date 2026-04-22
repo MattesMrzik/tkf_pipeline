@@ -9,13 +9,14 @@ project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 
 from viz.tree.calculate_distances import calculate_distances
 
-def all_inf_dirs(base_dir = os.path.join(project_root, RESULTS_INF_DIR)):
+def all_tree_inf_dirs(base_dir = os.path.join(project_root, RESULTS_INF_DIR)):
     inf_dirs = []
     for root, _, files in os.walk(base_dir):
         if "final_tree.nwk" in files:
             inf_dirs.append(root)
     return inf_dirs
 
+# TODO: this is basically the same as the one in asr utils
 def get_msa_dir_from_inf(inf_dir):
     parts = inf_dir.split(os.sep)
     inf_idx = parts.index(TREE_INF_DIR)

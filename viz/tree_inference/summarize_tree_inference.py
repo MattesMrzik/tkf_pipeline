@@ -3,8 +3,8 @@ import os
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 
 from viz.utils import load_snakemake_config_yaml, get_last_line_value, add_to_ordered_set, write_table
-from utils import RESULTS_INF_DIR, all_inf_dirs, distances_for_true_vs_inferred, distances_for_true_vs_start_nj_tree
-from calculate_time import parse_jati_time, parse_iqtree_time
+from viz.tree_inference.utils import RESULTS_INF_DIR, all_tree_inf_dirs, distances_for_true_vs_inferred, distances_for_true_vs_start_nj_tree
+from viz.tree_inference.calculate_time import parse_jati_time, parse_iqtree_time
 from snakemake_helpers import get_tool_params
 
 def main():
@@ -16,7 +16,7 @@ def main():
         print(f"Directory {results_inf_dir} does not exist.")
         return
 
-    inf_dirs = all_inf_dirs(results_inf_dir)
+    inf_dirs = all_tree_inf_dirs(results_inf_dir)
     
     all_rows = []
     all_keys = set()

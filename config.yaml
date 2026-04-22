@@ -94,7 +94,7 @@ tree_inf:
       model: ["JC"]
       path_snippet: "{model}"
 
-asr:
+asr: # with fixed true model parameters
   dir: "results/asr/{tree_sim_tool}/{tree_params}/{msa_sim_tool}/{msa_params}/{inference_tool}/{inf_params}/seed{seed}"
   tools:
     tkf_reestimate:
