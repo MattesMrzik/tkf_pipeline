@@ -1,22 +1,13 @@
 import os
 
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
-
-from viz.utils import load_snakemake_config_yaml, get_last_line_value, add_to_ordered_set, write_table
-from viz.tree_inference.utils import RESULTS_INF_DIR, all_tree_inf_dirs, distances_for_true_vs_inferred, distances_for_true_vs_start_nj_tree
-from viz.tree_inference.calculate_time import parse_jati_time, parse_iqtree_time
+from viz.utils import PROJECT_ROOT, all_inf_dirs, load_snakemake_config_yaml, get_last_line_value, add_to_ordered_set, parse_jati_time, write_table
+from viz.tree_inference.utils import TREE_INF_DIR, distances_for_true_vs_inferred, distances_for_true_vs_inferred, distances_for_true_vs_start_nj_tree, parse_iqtree_time
 from snakemake_helpers import get_tool_params
 
 def main():
     config = load_snakemake_config_yaml()
     
-    results_inf_dir = os.path.join(project_root, RESULTS_INF_DIR)
-    
-    if not os.path.exists(results_inf_dir):
-        print(f"Directory {results_inf_dir} does not exist.")
-        return
-
-    inf_dirs = all_tree_inf_dirs(results_inf_dir)
+    inf_dirs = all_inf_dirs(TREE_INF_DIR, "final_tree.nwk")
     
     all_rows = []
     all_keys = set()
@@ -60,7 +51,7 @@ def main():
     remaining_cols = sorted(list(all_keys - set(column_order)))
     column_order += remaining_cols
 
-    write_table(all_rows, column_order, os.path.join(project_root, "results/tree_inf_summary.tsv"))
+    write_table(all_rows, column_order, os.path.join(PROJECT_ROOT, "results/tree_inf_summary.tsv"))
 
 if __name__ == "__main__":
     main()

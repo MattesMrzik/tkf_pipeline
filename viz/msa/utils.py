@@ -1,11 +1,12 @@
 import os
 from typing import Dict
 
-RESULTS_MSA_DIR = "results/msas"
+from viz.utils import PROJECT_ROOT
 
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+MSA_DIR = "msas"
 
-def all_msa_dirs(base_dir = os.path.join(project_root, RESULTS_MSA_DIR)):
+def all_msa_dirs():
+    base_dir = os.path.join(PROJECT_ROOT, MSA_DIR)
     msa_dirs = []
     for root, _, files in os.walk(base_dir): # _ is dirs 
         if "msa.fasta" in files:

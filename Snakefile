@@ -8,7 +8,6 @@ import os
 from snakemake_helpers import infer_wildcard_constraints, make_targets, get_tree_path, get_msa_output, get_inf_output, get_inf_output_with_msa_params
 
 SEEDS = config["seeds"]
-# Select environment based on config (set by profile)
 ENV = config.get("env", "local")
 PATHS = config["environments"][ENV]
 
@@ -32,7 +31,6 @@ MODEL_PARAMS_INF_TOOLS = config["model_param_inf"]["tools"]
 TREE_INF_TOOLS = config["tree_inf"]["tools"]
 MSA_SIM_TOOLS = config["msa_sim"]["tools"]
 
-# apply globally
 wildcard_constraints:
     **infer_wildcard_constraints(config)
 
@@ -63,10 +61,21 @@ asr = make_targets(config, "tree_sim", "msa_sim", primary="asr")
 asr_and_params = make_targets(config, "tree_sim", "msa_sim", primary="asr_and_params")
 rule all_tkf_asrs:
     input:
-        [t + "/masa.fasta" for t in asr + asr_and_params if "/tkf/" in t],
+        [t + "/masa.fasta" for t in asr if "/tkf/" in t],
 
 rule all_tkf_asr_and_params:
     input:
+        [t + "/masa.fasta" for t in asr_and_params if "/tkf/" in t],
+        [t + "/params.json" for t in asr_and_params if "/tkf/" in t]
+
+rule all_sanity:
+    input:
+        make_targets(config, "tree_sim", primary="msa_sim", suffix="/msa.fasta"),
+        make_targets(config, "tree_sim", primary="msa_sim", suffix="/masa.fasta"),
+        [f for f in make_targets(config, "tree_sim", primary="msa_sim", suffix="/sim_logl.out") if "/tkf/" in f],
+        [f for f in make_targets(config, "tree_sim", primary="msa_sim", suffix="/sim_indel_logl.out") if "/tkf/" in f],
+        make_targets(config, "tree_sim", "msa_sim", primary="model_param_inf", suffix="/logl.out"),
+        [t + "/masa.fasta" for t in asr if "/tkf/" in t],
         [t + "/masa.fasta" for t in asr_and_params if "/tkf/" in t],
         [t + "/params.json" for t in asr_and_params if "/tkf/" in t]
 
@@ -115,7 +124,7 @@ rule iqtree_tree:
         mem_mb=1024
     shell:
         """
-        {IQTREE3} -r {wildcards.species} {output.tree}.raw -nt 1 --seed {wildcards.seed} -redo
+        {IQTREE3} -r {wildcards.species} --rlen {wildcards.min} {wildcards.mean} {wildcards.max} {output.tree}.raw -nt 1 --seed {wildcards.seed} -redo
         {ROOTER} --i {output.tree_raw} --ow {output.tree} --owo {output.tree_wo}
         """
 
@@ -159,7 +168,7 @@ rule simulate_tkf_alignment:
             --mu {wildcards.mu} \
             --r {wildcards.r} \
             --max-insertion-length {wildcards.max_insertion} \
-            --root-length {wildcards.root_length} \
+            --root-length {wildcards.tkf_root_length} \
             --seed {wildcards.seed} \
             --output-dir $(dirname {output.msa})
         cp {input.tree_wo} {output.tree_w_internal_wo}
@@ -176,7 +185,7 @@ rule tkf_sim_alignment_logl:
         """
         mkdir -p $(dirname {output.logl})
         {MODEL_SEARCH_PHYLO} \
-            --out-folder $(dirname {output.logl}) \
+            --out-folder $(dirname {output.logl})/with_subst \
             --seq-file {input.msa} \
             --tree-file {input.tree} \
             --model {wildcards.model}\
@@ -186,9 +195,9 @@ rule tkf_sim_alignment_logl:
             --freq-opt fixed \
             --seed {wildcards.seed} \
             -l warn 
-        mv $(dirname {output.logl})/*/*.out {output.logl}
-        mv $(dirname {output.logl})/*/*.log {output.log}
-        rm -rf $(dirname {output.logl})/*/
+        mv $(dirname {output.logl})/with_subst/*/*.out {output.logl}
+        mv $(dirname {output.logl})/with_subst/*/*.log {output.log}
+        rm -rf $(dirname {output.logl})/with_subst/
         """
 
 rule tkf_sim_alignment_indel_logl: 
@@ -202,7 +211,7 @@ rule tkf_sim_alignment_indel_logl:
         """
         mkdir -p $(dirname {output.logl})
         {MODEL_SEARCH_PHYLO} \
-            --out-folder $(dirname {output.logl}) \
+            --out-folder $(dirname {output.logl})/only_indels \
             --seq-file {input.msa} \
             --tree-file {input.tree} \
             --model none \
@@ -212,9 +221,9 @@ rule tkf_sim_alignment_indel_logl:
             --freq-opt fixed \
             --seed {wildcards.seed} \
             -l warn 
-        mv $(dirname {output.logl})/*/*.out {output.logl}
-        mv $(dirname {output.logl})/*/*.log {output.log}
-        rm -rf $(dirname {output.logl})/*/
+        mv $(dirname {output.logl})/only_indels/*/*.out {output.logl}
+        mv $(dirname {output.logl})/only_indels/*/*.log {output.log}
+        rm -rf $(dirname {output.logl})/only_indels/
         """
 
 rule simulate_alisim_alignment:
@@ -289,9 +298,6 @@ rule jati_model_param_search:
     resources:
         mem_mb=4096
     params:
-        epsilon = MODEL_PARAMS_INF_TOOLS["jati_model_param_search"]["epsilon"],
-        # TODO here i should also use the wildcads of the path and not acces this parameter in 
-        # (ie epsilon) in this above fashion. also add the maxiterantosn and eopxilon the the pathsnippet for that
         seq_file = lambda wc, input: input.masa if wc.gap == "TKF92" else input.msa,
         out_base = get_inf_output("model_param_inf", "jati_model_param_search")
     shell:
@@ -304,7 +310,7 @@ rule jati_model_param_search:
             --tree-file {input.tree} \
             --model {wildcards.model} \
             --gap-handling {wildcards.gap} \
-            --epsilon {params.epsilon} \
+            --epsilon {wildcards.epsilon} \
             --seed {wildcards.seed} \
             -l warn 
         mv {params.out_base}/*/*.out {output.logl}
@@ -408,7 +414,7 @@ rule tkf_indel_asr_and_params:
             --tree-file {input.tree} \
             --out-folder $(dirname {output.asr}) \
             --algorithm-type tkf92 \
-            --params {wildcards.lambda} {wildcards.mu} {wildcards.r} \
+            --params {wildcards.s_l} {wildcards.s_m} {wildcards.s_r} \
             --seed {wildcards.seed} \
             -l warn \
             --max-iterations {wildcards.max_iterations} \
@@ -436,7 +442,6 @@ rule jati_inference:
     resources:
         mem_mb=4096
     params:
-        max_iterations = TREE_INF_TOOLS["jati"]["max_iterations"],
         out_base = get_inf_output("tree_inf", "jati"),
         force_nni = lambda wildcards: "--force-nni" if wildcards.move == "NNI" else ""
     shell:
@@ -451,7 +456,8 @@ rule jati_inference:
             {params.force_nni} \
             --seed {wildcards.seed} \
             -l warn \
-            --max-iterations {params.max_iterations}
+            --max-iterations {wildcards.max_iterations}
+            --epsilon {wildcards.epsilon}
         mv {params.out_base}/*/*_start_tree.newick {output.start_tree}
         mv {params.out_base}/*/*_tree.newick {output.final_tree}
         mv {params.out_base}/*/*_logl.out {output.logl}

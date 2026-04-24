@@ -1,26 +1,17 @@
 import os
 
-from viz.utils import load_snakemake_config_yaml, add_to_ordered_set, write_table, get_last_line_value
+from viz.utils import PROJECT_ROOT, all_inf_dirs, get_msa_dir_from_inf, load_snakemake_config_yaml, add_to_ordered_set, parse_jati_time, write_table, get_last_line_value
 from viz.model_param_inference.summarize_utils import (
-    RESULTS_INF_DIR,
-    all_model_inf_dirs,
     load_params_json,
-    get_msa_dir_from_inf
+    MODEL_INF_DIR
 )
 from snakemake_helpers import get_tool_params
-
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 
 def main():
     config = load_snakemake_config_yaml()
 
-    results_inf_dir = os.path.join(project_root, RESULTS_INF_DIR)
+    inf_dirs = all_inf_dirs(MODEL_INF_DIR, "logl.out")
 
-    if not os.path.exists(results_inf_dir):
-        print(f"Directory {results_inf_dir} does not exist.")
-        return
-
-    inf_dirs = all_model_inf_dirs(results_inf_dir)
     all_rows = []
     all_keys = set()
     tree_col_names = []
@@ -43,9 +34,7 @@ def main():
         add_to_ordered_set(inf_col_names, inf_params.keys())
         row.update(inf_params)
 
-        print("d = ", d)
         params = load_params_json(os.path.join(d, "params.json"))
-        print(f"Loaded params: {params}")
         if "params" in params:
             params = params["params"]
             if len(params) == 3:
@@ -54,7 +43,10 @@ def main():
                 row["i_r"] = params[2]
 
         row["logl"] = get_last_line_value(os.path.join(d, "logl.out"))
-        row["true_logl"] = get_last_line_value(os.path.join(get_msa_dir_from_inf(d), "sim_indel_logl.out"))
+        row["logl_true"] = get_last_line_value(os.path.join(get_msa_dir_from_inf(d, MODEL_INF_DIR), "sim_indel_logl.out"))
+
+        log_path = os.path.join(d, "log.txt")
+        row["time"] = parse_jati_time(log_path)
 
         all_rows.append(row)
         all_keys.update(row.keys())
@@ -64,7 +56,7 @@ def main():
     column_order += remaining_cols
 
     write_table(
-        all_rows, column_order, os.path.join(project_root, "results/model_inf_summary.tsv")
+        all_rows, column_order, os.path.join(PROJECT_ROOT, "results/model_inf_summary.tsv")
     )
 
 if __name__ == "__main__":
