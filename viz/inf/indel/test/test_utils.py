@@ -1,7 +1,7 @@
 import os
 
-from viz.msa.utils import load_msa
-from viz.indel_points_inference.utils import load_tree, infer_indels, EventType
+from viz.sim.msa.utils import load_msa
+from viz.inf.indel.indels_from_msa import load_tree, infer_indels, EventType
 
 def test_infer_indels():
     base_dir = os.path.join(os.path.dirname(__file__), "data")

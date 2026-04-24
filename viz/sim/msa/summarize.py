@@ -1,7 +1,7 @@
 import os
 
-from viz.msa_sim.msa_features import get_fasta_length, get_gap_stats, calculate_gap_free_entropy
-from viz.msa_sim.utils import all_msa_dirs, load_msa
+from viz.sim.msa.msa_features import get_fasta_length, get_gap_stats, calculate_gap_free_entropy
+from viz.sim.msa.utils import all_msa_dirs, load_msa
 from viz.utils import PROJECT_ROOT, load_snakemake_config_yaml, add_to_ordered_set, write_table
 from snakemake_helpers import get_tool_params
 

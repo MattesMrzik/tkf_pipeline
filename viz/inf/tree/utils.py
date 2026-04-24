@@ -2,7 +2,7 @@ import os
 import re
 
 from viz.utils import  get_last_line_value, get_msa_dir_from_inf
-from viz.tree_inf.calculate_distances import calculate_distances
+from viz.inf.tree.calculate_distances import calculate_distances
 
 TREE_INF_DIR = "tree_inference"
 

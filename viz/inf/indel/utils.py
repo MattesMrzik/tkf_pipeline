@@ -1,7 +1,7 @@
 import os
 
 from viz.utils import get_msa_dir_from_inf
-from viz.indel_inf.compare import compare_from_files
+from viz.inf.indel.compare import compare_from_files
 
 INDEL_INF_DIR = "asr"
 

@@ -2,8 +2,8 @@ import dendropy
 import statistics
 from typing import Dict, List, Set
 
-from viz.msa_sim.utils import load_msa
-from viz.indel_inf.utils import (
+from viz.sim.msa.utils import load_msa
+from viz.inf.indel.indels_from_msa import (
     load_tree,
     infer_indels,
     EventType,

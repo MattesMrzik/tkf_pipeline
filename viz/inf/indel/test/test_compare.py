@@ -1,6 +1,6 @@
 import os
 
-from viz.indel_points_inference.compare import compare_from_files
+from viz.inf.indel.compare import compare_from_files
 
 def test_compare_insertion_annotations():
     base_dir = os.path.join(os.path.dirname(__file__), "data")

@@ -1,7 +1,7 @@
 import os
 
 from viz.utils import PROJECT_ROOT, all_inf_dirs, load_snakemake_config_yaml, get_last_line_value, add_to_ordered_set, parse_jati_time, write_table
-from viz.tree_inf.utils import TREE_INF_DIR, distances_for_true_vs_inferred, distances_for_true_vs_inferred, distances_for_true_vs_start_nj_tree, parse_iqtree_time
+from viz.inf.tree.utils import TREE_INF_DIR, distances_for_true_vs_inferred, distances_for_true_vs_inferred, distances_for_true_vs_start_nj_tree, parse_iqtree_time
 from snakemake_helpers import get_tool_params
 
 def main():
