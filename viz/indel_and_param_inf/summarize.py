@@ -1,11 +1,11 @@
 import os
 
 from viz.utils import PROJECT_ROOT, all_inf_dirs, get_msa_dir_from_inf, load_snakemake_config_yaml, add_to_ordered_set, parse_jati_time, write_table, get_last_line_value
-from viz.indels_and_params_inf.summarize_utils import (
+from viz.indel_and_param_inf.summarize_utils import (
     INDEL_AND_PARAMS_INF_DIR,
 )
-from viz.indel_points_inference.summarize_utils import compare_indel_events
-from viz.model_param_inference.summarize_utils import load_params_json
+from viz.indel_inf.summarize_utils import compare_indel_events
+from viz.param_inf.summarize_utils import load_params_json
 from snakemake_helpers import get_tool_params
 
 def main():

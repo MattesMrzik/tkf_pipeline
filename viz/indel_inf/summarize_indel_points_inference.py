@@ -1,7 +1,7 @@
 import os
 
 from viz.utils import PROJECT_ROOT, all_inf_dirs, load_snakemake_config_yaml, add_to_ordered_set, parse_jati_time, write_table, get_last_line_value
-from viz.indel_points_inference.summarize_utils import (
+from viz.indel_inf.summarize_utils import (
     INDEL_INF_DIR,
     compare_indel_events,
     get_msa_dir_from_inf

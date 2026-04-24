@@ -1,7 +1,7 @@
 import os
 
 from viz.utils import PROJECT_ROOT, all_inf_dirs, get_msa_dir_from_inf, load_snakemake_config_yaml, add_to_ordered_set, parse_jati_time, write_table, get_last_line_value
-from viz.model_param_inference.summarize_utils import (
+from viz.param_inf.summarize_utils import (
     load_params_json,
     MODEL_INF_DIR
 )
