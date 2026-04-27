@@ -52,16 +52,17 @@ msa_sim:
   dir: "results/msas/{tree_sim_tool}/{tree_params}/{msa_sim_tool}/{msa_params}/seed{seed}"
   tools:
     tkf:
-      lambda: [0.03]
-      mu: [0.0303]
-      r: [0.8]
+      params:
+        - {lambda: 0.03, mu: 0.033, r: 0.8}
+        # - {lambda: 0.08, mu: 0.1, r: 0.5}
+        # - {lambda: 0.1, mu: 0.2, r: 0.2}
       max_insertion: 50
-      root_length: [500]
+      tkf_root_length: ["sampled", "expected"]
       model: ["jc69"]
-      path_snippet: "l{lambda}_mu{mu}_r{r}_max{max_insertion}_len{root_length}_{model}"
+      path_snippet: "l{lambda}_mu{mu}_r{r}_max{max_insertion}_len{tkf_root_length}_{model}"
     alisim:
       model: ["JC"]
-      root_length: [500]
+      root_length: []
       ir_ip:
         - {ir: 0.006, ip: 0.018}
       path_snippet: "ir{ir}_ip{ip}_len{root_length}_{model}"
