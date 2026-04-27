@@ -41,8 +41,12 @@ tree_sim:
       mutation_rate: [1.0]
       path_snippet: "s{species}_b{birth}_d{death}_f{sampling_fraction}_m{mutation_rate}"
     iqtree:
-      species: [8, 16]
-      path_snippet: "s{species}"
+      species: [16]
+      blen:
+        - {min: 0.0001, mean: 0.1, max: 1}
+        # - {min: 0.0001, mean: 0.2, max: 1}
+        # - {min: 0.0001, mean: 0.4, max: 1}
+      path_snippet: "s{species}_blen{min}_{mean}_{max}"
 
 msa_sim:
   dir: "results/msas/{tree_sim_tool}/{tree_params}/{msa_sim_tool}/{msa_params}/seed{seed}"
