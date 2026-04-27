@@ -1,9 +1,9 @@
 import os
 
-from viz.utils import get_msa_dir_from_inf
+from viz.utils import get_msa_dir_from_inf, get_tool_type_dir
 from viz.inf.indel.compare import compare_from_files
 
-INDEL_INF_DIR = "asr"
+INDEL_INF_DIR = get_tool_type_dir("indel_inf") 
 
 def compare_indel_events(d, inf_type = INDEL_INF_DIR):
     msa_dir = get_msa_dir_from_inf(d, inf_type)

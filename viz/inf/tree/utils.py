@@ -1,10 +1,10 @@
 import os
 import re
 
-from viz.utils import  get_last_line_value, get_msa_dir_from_inf
+from viz.utils import  get_last_line_value, get_msa_dir_from_inf, get_tool_type_dir
 from viz.inf.tree.calculate_distances import calculate_distances
 
-TREE_INF_DIR = "tree_inference"
+TREE_INF_DIR = get_tool_type_dir("tree_inf")
 
 def distances_for_true_vs_inferred(d):
         msa_dir = get_msa_dir_from_inf(d, TREE_INF_DIR)

@@ -27,9 +27,6 @@ LOAD_PYTHON = f"source conda activate {CONDA_ENV}; " if ENV == "hpc" and CONDA_E
 
 TREE_PATH = config["tree_sim"]["dir"]
 MSA_PATH = config["msa_sim"]["dir"]
-MODEL_PARAMS_INF_TOOLS = config["model_param_inf"]["tools"]
-TREE_INF_TOOLS = config["tree_inf"]["tools"]
-MSA_SIM_TOOLS = config["msa_sim"]["tools"]
 
 wildcard_constraints:
     **infer_wildcard_constraints(config)
@@ -45,9 +42,9 @@ rule all_msas:
         [f for f in make_targets(config, "tree_sim", primary="msa_sim", suffix="/sim_logl.out") if "/tkf/" in f],
         [f for f in make_targets(config, "tree_sim", primary="msa_sim", suffix="/sim_indel_logl.out") if "/tkf/" in f]
 
-rule all_model_infs:
+rule all_param_infs:
     input:
-        make_targets(config, "tree_sim", "msa_sim", primary="model_param_inf", suffix="/logl.out")
+        make_targets(config, "tree_sim", "msa_sim", primary="param_inf", suffix="/logl.out")
 
 rule all_tree_infs:
     input:
@@ -57,39 +54,28 @@ rule all_tree_pngs:
     input:
         [p.replace(".nwk", ".png") for p in rules.all_trees.input]
 
-asr = make_targets(config, "tree_sim", "msa_sim", primary="asr")
-asr_and_params = make_targets(config, "tree_sim", "msa_sim", primary="asr_and_params")
-rule all_tkf_asrs:
+indel = make_targets(config, "tree_sim", "msa_sim", primary="indel_inf")
+indel_and_params = make_targets(config, "tree_sim", "msa_sim", primary="indel_and_param_inf")
+rule all_tkf_msas_indel_infs:
     input:
-        [t + "/masa.fasta" for t in asr if "/tkf/" in t],
+        [t + "/masa.fasta" for t in indel if "/tkf/" in t],
 
-rule all_tkf_asr_and_params:
+rule all_tkf_msas_indel_and_param_infs:
     input:
-        [t + "/masa.fasta" for t in asr_and_params if "/tkf/" in t],
-        [t + "/params.json" for t in asr_and_params if "/tkf/" in t]
+        [t + "/masa.fasta" for t in indel_and_params if "/tkf/" in t],
+        [t + "/params.json" for t in indel_and_params if "/tkf/" in t]
 
 rule all_sanity:
     input:
-        make_targets(config, "tree_sim", primary="msa_sim", suffix="/msa.fasta"),
-        make_targets(config, "tree_sim", primary="msa_sim", suffix="/masa.fasta"),
-        [f for f in make_targets(config, "tree_sim", primary="msa_sim", suffix="/sim_logl.out") if "/tkf/" in f],
-        [f for f in make_targets(config, "tree_sim", primary="msa_sim", suffix="/sim_indel_logl.out") if "/tkf/" in f],
-        make_targets(config, "tree_sim", "msa_sim", primary="model_param_inf", suffix="/logl.out"),
-        [t + "/masa.fasta" for t in asr if "/tkf/" in t],
-        [t + "/masa.fasta" for t in asr_and_params if "/tkf/" in t],
-        [t + "/params.json" for t in asr_and_params if "/tkf/" in t]
-
-rule all_asr_and_params:
-    input:
-        [t + "/masa.fasta" for t in asr_and_params],
-        [t + "/params.json" for t in asr_and_params]
-
-rule all:
-    input:
-        rules.all_trees.input,
         rules.all_msas.input,
-        rules.all_model_infs.input,
-        rules.all_tree_infs.input,
+        rules.all_param_infs.input,
+        rules.all_tkf_msas_indel_infs.input,
+        rules.all_tkf_msas_indel_and_param_infs.input
+
+rule all_indel_and_param_infs:
+    input:
+        [t + "/masa.fasta" for t in indel_and_params],
+        [t + "/params.json" for t in indel_and_params]
 
 #######################################################################
 #######################################################################
@@ -139,7 +125,7 @@ rule tree_png:
     shell:
         """
         {LOAD_PYTHON}
-        {PYTHON} viz/tree/visualize_trees.py --tree-file {input.tree} --output-file {output.plot}
+        {PYTHON} viz/sim/tree/visualize_trees.py --tree-file {input.tree} --output-file {output.plot}
         """
 
 #######################################################################
@@ -242,7 +228,7 @@ rule simulate_alisim_alignment:
         mkdir -p $(dirname {output.msa})
         {IQTREE3} \
             --alisim $(dirname {output.msa})/msa \
-            -m {MSA_SIM_TOOLS[alisim][model]} \
+            -m {wildcards.model} \
             -t {input.tree_wo} \
             --indel {wildcards.ir},{wildcards.ip} \
             --length {wildcards.root_length} \
@@ -268,7 +254,7 @@ rule simulate_alisim_ancestral_alignment:
         mkdir -p $(dirname {output.msa})
         {IQTREE3} \
             --alisim $(dirname {output.msa})/masa \
-            -m {MSA_SIM_TOOLS[alisim][model]} \
+            -m {wildcards.model} \
             -t {input.tree_wo} \
             --indel {wildcards.ir},{wildcards.ip} \
             --length {wildcards.root_length} \
@@ -291,15 +277,15 @@ rule jati_model_param_search:
         msa = MSA_PATH + "/msa.fasta", # using this for non-TKF
         tree = MSA_PATH + "/tree.nwk"
     output:
-        logl = get_inf_output("model_param_inf", "jati_model_param_search") + "/logl.out",
-        log = get_inf_output("model_param_inf", "jati_model_param_search") + "/log.txt",
-        params = get_inf_output("model_param_inf", "jati_model_param_search") + "/params.json"
+        logl = get_inf_output("param_inf", "jati_model_param_search") + "/logl.out",
+        log = get_inf_output("param_inf", "jati_model_param_search") + "/log.txt",
+        params = get_inf_output("param_inf", "jati_model_param_search") + "/params.json"
     threads: 1
     resources:
         mem_mb=4096
     params:
         seq_file = lambda wc, input: input.masa if wc.gap == "TKF92" else input.msa,
-        out_base = get_inf_output("model_param_inf", "jati_model_param_search")
+        out_base = get_inf_output("param_inf", "jati_model_param_search")
     shell:
         """
         mkdir -p {params.out_base}
@@ -324,8 +310,8 @@ rule iqtree_model_param_search:
         msa = MSA_PATH + "/msa.fasta",
         tree = MSA_PATH + "/tree.nwk.wo"
     output:
-        logl = get_inf_output("model_param_inf", "iqtree_model_param_search") + "/logl.out",
-        log = get_inf_output("model_param_inf", "iqtree_model_param_search") + "/log.txt"
+        logl = get_inf_output("param_inf", "iqtree_model_param_search") + "/logl.out",
+        log = get_inf_output("param_inf", "iqtree_model_param_search") + "/log.txt"
     threads: 1
     resources:
         mem_mb=4096
@@ -349,7 +335,7 @@ rule tkf_indel_asr:
         msa = get_msa_output("tkf") + "/msa.fasta",
         tree = get_msa_output("tkf") + "/tree.nwk"
     output:
-        asr = get_inf_output_with_msa_params("asr", "tkf_reestimate", "tkf") + "/masa.fasta"
+        asr = get_inf_output_with_msa_params("indel_inf", "tkf_reestimate", "tkf") + "/masa.fasta"
     threads: 1
     resources:
         mem_mb=4096
@@ -376,7 +362,7 @@ rule parsimony_indel_asr:
         tree = get_msa_output("tkf") + "/tree.nwk"
         # we only use tkf alignments here since we want to calculate the logl of the parsimony ASR under the true params
     output:
-        asr = get_inf_output_with_msa_params("asr", "dollo_parsimony", "tkf") + "/masa.fasta"
+        asr = get_inf_output_with_msa_params("indel_inf", "dollo_parsimony", "tkf") + "/masa.fasta"
     threads: 1
     resources:
         mem_mb=4096
@@ -400,8 +386,8 @@ rule tkf_indel_asr_and_params:
         msa = MSA_PATH + "/msa.fasta",
         tree = MSA_PATH + "/tree.nwk"
     output:
-        asr = get_inf_output("asr_and_params", "jati_asr_and_params") + "/masa.fasta",
-        params = get_inf_output("asr_and_params", "jati_asr_and_params") + "/params.json"
+        asr = get_inf_output("indel_and_param_inf", "jati_asr_and_params") + "/masa.fasta",
+        params = get_inf_output("indel_and_param_inf", "jati_asr_and_params") + "/params.json"
     threads: 1
     resources:
         mem_mb=4096
@@ -456,7 +442,7 @@ rule jati_inference:
             {params.force_nni} \
             --seed {wildcards.seed} \
             -l warn \
-            --max-iterations {wildcards.max_iterations}
+            --max-iterations {wildcards.max_iterations} \
             --epsilon {wildcards.epsilon}
         mv {params.out_base}/*/*_start_tree.newick {output.start_tree}
         mv {params.out_base}/*/*_tree.newick {output.final_tree}

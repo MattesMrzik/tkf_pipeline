@@ -1,9 +1,9 @@
 import os
 from typing import Dict
 
-from viz.utils import PROJECT_ROOT
+from viz.utils import PROJECT_ROOT, get_tool_type_dir
 
-MSA_DIR = "msas"
+MSA_DIR = get_tool_type_dir("msa_sim")
 
 def all_msa_dirs():
     base_dir = os.path.join(PROJECT_ROOT, MSA_DIR)

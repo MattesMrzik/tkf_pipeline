@@ -82,10 +82,10 @@ config = load_snakemake_config_yaml()
 STAGES = {
     "tree_sim": {"tool_wc": "tree_sim_tool", "params_wc": "tree_params"},
     "msa_sim": {"tool_wc": "msa_sim_tool", "params_wc": "msa_params"},
-    "model_param_inf": {"tool_wc": "inference_tool", "params_wc": "inf_params"},
+    "param_inf": {"tool_wc": "inference_tool", "params_wc": "inf_params"},
     "tree_inf": {"tool_wc": "inference_tool", "params_wc": "inf_params"},
-    "asr": {"tool_wc": "inference_tool", "params_wc": "inf_params"},
-    "asr_and_params": {"tool_wc": "inference_tool", "params_wc": "inf_params"},
+    "indel_inf": {"tool_wc": "inference_tool", "params_wc": "inf_params"},
+    "indel_and_param_inf": {"tool_wc": "inference_tool", "params_wc": "inf_params"},
 }
 
 def make_targets(cfg, *stages, primary, suffix=""):

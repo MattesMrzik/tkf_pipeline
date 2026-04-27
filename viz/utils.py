@@ -3,8 +3,17 @@ import yaml
 import csv
 from datetime import datetime
 
-RESULTS_DIR = "results"
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+def load_snakemake_config_yaml(config_path = os.path.join(PROJECT_ROOT, "config.yaml")):
+    with open(config_path, "r") as f:
+        return yaml.safe_load(f)
+
+SNAKEMAKE_CONFIG = load_snakemake_config_yaml()
+
+def get_tool_type_dir(tool_type):
+    snippet = SNAKEMAKE_CONFIG[tool_type]["dir"]
+    return snippet.split("{")[0] # get the part before the first wildcard
 
 def add_to_ordered_set(ordered_set, new_keys):
     for key in new_keys:
@@ -22,10 +31,6 @@ def get_last_line_value(file_path):
     except (ValueError, IndexError):
         pass
     return "NA"
-
-def load_snakemake_config_yaml(config_path = os.path.join(PROJECT_ROOT, "config.yaml")):
-    with open(config_path, "r") as f:
-        return yaml.safe_load(f)
     
 def write_table(rows, column_order, output_path):
     os.makedirs(os.path.dirname(output_path), exist_ok=True)

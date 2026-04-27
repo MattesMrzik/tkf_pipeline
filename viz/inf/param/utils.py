@@ -1,7 +1,9 @@
 import json
 import os
 
-MODEL_INF_DIR = "model_inference"
+from viz.utils import get_tool_type_dir
+
+MODEL_INF_DIR = get_tool_type_dir("param_inf")
 
 def load_params_json(path):
     if not os.path.exists(path):

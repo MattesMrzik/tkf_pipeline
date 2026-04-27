@@ -27,10 +27,10 @@ environments:
 seeds: [1]
 
 tree_sim:
-  dir: "results/trees/{tree_sim_tool}/{tree_params}/seed{seed}.nwk"
+  dir: "results/sim/tree/{tree_sim_tool}/{tree_params}/seed{seed}.nwk"
   tools:
     evolver:
-      species: []
+      species: [8]
       birth_death:
         - {birth: 1.0, death: 2.0}
       sampling_fraction: [0.25]
@@ -45,7 +45,7 @@ tree_sim:
       path_snippet: "s{species}_blen{min}_{mean}_{max}"
 
 msa_sim:
-  dir: "results/msas/{tree_sim_tool}/{tree_params}/{msa_sim_tool}/{msa_params}/seed{seed}"
+  dir: "results/sim/msa/{tree_sim_tool}/{tree_params}/{msa_sim_tool}/{msa_params}/seed{seed}"
   tools:
     tkf:
       params:
@@ -53,18 +53,19 @@ msa_sim:
         # - {lambda: 0.08, mu: 0.1, r: 0.5}
         # - {lambda: 0.1, mu: 0.2, r: 0.2}
       max_insertion: 50
-      tkf_root_length: ["sampled", "expected"]
+      # tkf_root_length: ["sampled", "expected"]
+      tkf_root_length: ["sampled"]
       model: ["jc69"]
       path_snippet: "l{lambda}_mu{mu}_r{r}_max{max_insertion}_len{tkf_root_length}_{model}"
     alisim:
       model: ["JC"]
-      root_length: []
+      root_length: [10]
       ir_ip:
         - {ir: 0.006, ip: 0.018}
       path_snippet: "ir{ir}_ip{ip}_len{root_length}_{model}"
 
-model_param_inf:
-  dir: "results/model_inference/{tree_sim_tool}/{tree_params}/{msa_sim_tool}/{msa_params}/{inference_tool}/{inf_params}/seed{seed}"
+param_inf:
+  dir: "results/inf/param/{tree_sim_tool}/{tree_params}/{msa_sim_tool}/{msa_params}/{inference_tool}/{inf_params}/seed{seed}"
   tools:
     jati_model_param_search:
       model_gap:
@@ -74,12 +75,12 @@ model_param_inf:
       max_iterations: 5
       path_snippet: "{model}_{gap}_{max_iterations}iter_epsilon{epsilon}"
     iqtree_model_param_search:
-      # model: ["JC"]
-      model: []
+      model: ["JC"]
+      # model: []
       path_snippet: "{model}"
 
-asr: # with fixed true model parameters
-  dir: "results/asr/{tree_sim_tool}/{tree_params}/{msa_sim_tool}/{msa_params}/{inference_tool}/{inf_params}/seed{seed}"
+indel_inf: # with fixed true model parameters
+  dir: "results/inf/indel/{tree_sim_tool}/{tree_params}/{msa_sim_tool}/{msa_params}/{inference_tool}/{inf_params}/seed{seed}"
   tools:
     tkf_reestimate:
       max_iterations: 5
@@ -88,8 +89,8 @@ asr: # with fixed true model parameters
     dollo_parsimony:
       path_snippet: "no_params"
 
-asr_and_params:
-  dir: "results/asr_and_params/{tree_sim_tool}/{tree_params}/{msa_sim_tool}/{msa_params}/{inference_tool}/{inf_params}/seed{seed}"
+indel_and_param_inf:
+  dir: "results/inf/indel_and_param/{tree_sim_tool}/{tree_params}/{msa_sim_tool}/{msa_params}/{inference_tool}/{inf_params}/seed{seed}"
   tools:
     jati_asr_and_params:
       start_params: 
@@ -99,15 +100,15 @@ asr_and_params:
       path_snippet: "l{s_l}_mu{s_m}_r{s_r}_{max_iterations}iter_epsilon{epsilon}"
 
 tree_inf:
-  dir: "results/tree_inference/{tree_sim_tool}/{tree_params}/{msa_sim_tool}/{msa_params}/{inference_tool}/{inf_params}/seed{seed}"
+  dir: "results/inf/tree/{tree_sim_tool}/{tree_params}/{msa_sim_tool}/{msa_params}/{inference_tool}/{inf_params}/seed{seed}"
   tools:
     jati:
       model_gap_move:
-        - {model: "jc69", gap: "PIP", move: "NNI"}
-        - {model: "jc69", gap: "Missing", move: "NNI"}
-        - {model: "jc69", gap: "Missing", move: "SPR"}
-        - {model: "jc69", gap: "PIP", move: "SPR"}
-        - {model: "jc69", gap: "TKF92", move: "NNI"}
+        # - {model: "jc69", gap: "PIP", move: "NNI"}
+        # - {model: "jc69", gap: "Missing", move: "NNI"}
+        # - {model: "jc69", gap: "Missing", move: "SPR"}
+        # - {model: "jc69", gap: "PIP", move: "SPR"}
+        # - {model: "jc69", gap: "TKF92", move: "NNI"}
         - {model: "NONE", gap: "TKF92", move: "NNI"}
       max_iterations: 5
       epsilon: 1e-5
