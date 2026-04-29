@@ -1,21 +1,20 @@
 # profiles/slurm/config.yaml
 executor: slurm
-jobs: 20
+jobs: 2000
 # i can define groups here such that i dont dispatch a job for every rule, which decreases slurm overhead 
 # but if i group and have one thread per rule, is there parallel execution within the group?
 # for longer tasks like jait i think its okeay to have no grouping
 default-resources:
   - slurm_partition=earth-3
-  - slurm_qos=earth-3.test
-  - slurm_time="0-00:01:00"
-  - slurm_extra="--constraint=rhel8"
+  - slurm_qos=earth-3.1d # perhaps dont specify this but specify resources ie time in the snakefile
+  - runtime=1440
+  # - slurm_extra="--constraint=rhel8" # this slurm extra seems to break the executor
   - mem_mb=4096
   - threads=1
-default-group-jobs: 1
-latency-wait: 60
+latency-wait: 10
 restart-times: 1
-max-jobs-per-second: 10
+max-jobs-per-second: 50 
 local-cores: 1
 config:
-  env: "hpc"
+  paths: "hpc"
 

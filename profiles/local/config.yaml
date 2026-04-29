@@ -4,4 +4,4 @@ default-resources:
   - threads=8
   - mem_mb=4096
 config:
-  env: "local"
+  paths: "local"

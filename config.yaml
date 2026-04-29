@@ -2,7 +2,7 @@ default-target: all
 # Use 'env: local' or 'env: hpc' to toggle between profiles
 env: local
 
-environments:
+tools_paths:
   local:
     python_bin: "/Users/mrzi/miniforge3/envs/snakemake/bin/python3"
     evolver: "/Users/mrzi/Documents/software/paml4/paml/src/evolver"
@@ -18,10 +18,10 @@ environments:
     evolver: "/cfs/earth/scratch/mrzi/.conda/envs/snakemake/bin/evolver"
     iqtree3: "/cfs/earth/scratch/mrzi/.conda/envs/snakemake/bin/iqtree"
     root_tree: "/cfs/earth/scratch/mrzi/develop/tkf_eval/tools/root_tree/target/debug/root_tree_and_internal_labels"
-    simulate_tkf: "/cfs/earth/scratch/mrzi/develop/tkf_eval/tools/root_tree/target/debug/simulate_tkf"
-    model_search_phylo: "/cfs/earth/scratch/mrzi/develop/tkf_eval/tools/root_tree/target/debug/model-search-phylo"
-    jati: "/cfs/earth/scratch/mrzi/develop/tkf_eval/tools/root_tree/target/debug/jati"
-    indel_asr: "/cfs/earth/scratch/mrzi/develop/tkf_eval/tools/root_tree/target/debug/indel_asr"
+    simulate_tkf: "/cfs/earth/scratch/mrzi/develop/tkf_eval/tools/simulate_tkf/target/debug/simulate_tkf"
+    model_search_phylo: "/cfs/earth/scratch/mrzi/develop/tkf_eval/tools/model_search_phylo/target/debug/model-search-phylo"
+    jati: "/cfs/earth/scratch/mrzi/develop/tkf_eval/tools/JATI/target/debug/jati"
+    indel_asr: "/cfs/earth/scratch/mrzi/develop/tkf_eval/tools/indel_asr/target/debug/indel_asr"
 
 # General
 seeds: [1]
@@ -30,18 +30,18 @@ tree_sim:
   dir: "results/sim/tree/{tree_sim_tool}/{tree_params}/seed{seed}.nwk"
   tools:
     evolver:
-      species: [8]
+      species: []
       birth_death:
         - {birth: 1.0, death: 2.0}
       sampling_fraction: [0.25]
       mutation_rate: [1.0]
       path_snippet: "s{species}_b{birth}_d{death}_f{sampling_fraction}_m{mutation_rate}"
     iqtree:
-      species: [16]
+      species: [8, 16, 32, 64]
       blen:
         - {min: 0.0001, mean: 0.1, max: 1}
-        # - {min: 0.0001, mean: 0.2, max: 1}
-        # - {min: 0.0001, mean: 0.4, max: 1}
+        - {min: 0.0001, mean: 0.2, max: 1}
+        - {min: 0.0001, mean: 0.4, max: 1}
       path_snippet: "s{species}_blen{min}_{mean}_{max}"
 
 msa_sim:
@@ -53,13 +53,13 @@ msa_sim:
         # - {lambda: 0.08, mu: 0.1, r: 0.5}
         # - {lambda: 0.1, mu: 0.2, r: 0.2}
       max_insertion: 50
-      # tkf_root_length: ["sampled", "expected"]
-      tkf_root_length: ["sampled"]
+      tkf_root_length: ["sampled", "expected"]
+      # tkf_root_length: ["sampled", "1000"]
       model: ["jc69"]
       path_snippet: "l{lambda}_mu{mu}_r{r}_max{max_insertion}_len{tkf_root_length}_{model}"
     alisim:
       model: ["JC"]
-      root_length: [10]
+      root_length: []
       ir_ip:
         - {ir: 0.006, ip: 0.018}
       path_snippet: "ir{ir}_ip{ip}_len{root_length}_{model}"
@@ -75,8 +75,8 @@ param_inf:
       max_iterations: 5
       path_snippet: "{model}_{gap}_{max_iterations}iter_epsilon{epsilon}"
     iqtree_model_param_search:
-      model: ["JC"]
-      # model: []
+      # model: ["JC"]
+      model: []
       path_snippet: "{model}"
 
 indel_inf: # with fixed true model parameters
@@ -93,7 +93,7 @@ indel_and_param_inf:
   dir: "results/inf/indel_and_param/{tree_sim_tool}/{tree_params}/{msa_sim_tool}/{msa_params}/{inference_tool}/{inf_params}/seed{seed}"
   tools:
     jati_asr_and_params:
-      start_params: 
+      start_params:
         - {s_l: 0.1, s_m: 0.2, s_r: 0.5}
       max_iterations: 5
       epsilon: 1e-5
