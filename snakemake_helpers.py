@@ -1,9 +1,11 @@
 from itertools import product
 import re
 from typing import cast
+import os
 
 from snakemake.io import expand
 
+from viz.sim.msa.utils import load_msa
 from viz.utils import load_snakemake_config_yaml
 
 def infer_wildcard_constraints(config):
@@ -139,3 +141,18 @@ def get_tool_params(path, config, tool_key):
             params.update(match.groupdict())
             return params
     return {}
+
+def compute_priority(wildcards, seqs_path = None):
+    if seqs_path is None: 
+        return -int(wildcards.seed)
+    if not os.path.exists(seqs_path.file):
+        raise ValueError("To use the priority run the msa stage first")
+    msa = load_msa(seqs_path)
+    msa_len = len(next(iter(msa.values())))
+    if "msa.fasta" in seqs_path: # we have a alignment with only leaves 
+        tree_size = len(msa) * 2 - 1
+    elif "masa.fasta" in seqs_path: # we have also the internal seqs 
+        tree_size = len(msa)
+    else:
+        raise ValueError(f"Unexpected seqs_path: {seqs_path}, must contain either msa.fasta or masa.fasta")
+    return tree_size * msa_len
