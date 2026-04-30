@@ -2,6 +2,7 @@ import numpy as np
 import re
 import math
 from collections import Counter
+import os
 
 def gap_concentration(df):
     df['gap_concentration'] = np.where(
@@ -11,16 +12,38 @@ def gap_concentration(df):
     )
     return df
 
-def get_fasta_length(sequences):
+def get_fasta_length(msa):
     """Returns the length of the first sequence in the FASTA."""
-    return len(sequences[0])
+    return len(next(iter(msa.values()))) if msa else 0
 
-def get_gap_stats(sequences):
+def get_tkf_sim_tries(msa_dir):
+    """Counts the number of TKF Sim tries for a given MSA directory. 
+    It is the largest int of info_{try}.txt that is a subdirectory of msa_dir."""
+    try:
+        files = os.listdir(msa_dir)
+        try_numbers = []
+        for file in files:
+            match = re.match(r"info_(\d+)\.txt", file)
+            if match:
+                try_numbers.append(int(match.group(1)))
+        return {"tkf_sim_tries": max(try_numbers) if try_numbers else 1}
+    except Exception:
+        return {"tkf_sim_tries": "NA"}
+
+def get_avg_seq_length(msa):
+    total_length = 0
+    for seq in msa.values():
+        for char in seq:
+            if char != '-':
+                total_length += 1
+    return total_length / len(msa) if msa else 0
+
+def get_gap_stats(msa):
     """Calculates comprehensive gap statistics for an MSA."""
     try:
-        if not sequences:
+        if not msa:
             return {"gap%": "NA", "gap_col%": "NA", "avg_gap_len": "NA"}
-
+        sequences = list(msa.values())
         msa_len = len(sequences[0])
         num_seqs = len(sequences)
         total_chars = msa_len * num_seqs
@@ -58,12 +81,12 @@ def get_gap_stats(sequences):
         pass
     return {"gap%": "NA", "gap_col%": "NA", "avg_gap_len": "NA"}
 
-def calculate_gap_free_entropy(sequences):
+def calculate_gap_free_entropy(msa):
     """Calculates the average Shannon entropy over all gap-free columns."""
     try:
-        if not sequences:
+        if not msa:
             return "NA"
-            
+        sequences = list(msa.values())
         msa_len = len(sequences[0])
         num_seqs = len(sequences)
         
