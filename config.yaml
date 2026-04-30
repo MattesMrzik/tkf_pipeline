@@ -2,13 +2,14 @@ default-target: all
 # Use 'env: local' or 'env: hpc' to toggle between profiles
 env: local
 
-tools_paths:
+tool_paths:
   local:
     python_bin: "/Users/mrzi/miniforge3/envs/snakemake/bin/python3"
     evolver: "/Users/mrzi/Documents/software/paml4/paml/src/evolver"
     iqtree3: "/Users/mrzi/Documents/software/iqtree3/iqtree3/build/iqtree3"
     root_tree: "/Users/mrzi/Documents/develop/tkf_eval/tools/root_tree/target/debug/root_tree_and_internal_labels"
     simulate_tkf: "/Users/mrzi/Documents/develop/tkf_eval/tools/simulate_tkf/target/debug/simulate_tkf"
+    prune_empty_leaves: "/Users/mrzi/Documents/develop/tkf_eval/tools/prune_empty_leaves/main.py"
     model_search_phylo: "/Users/mrzi/Documents/develop/tkf_eval/tools/model_search_phylo/target/debug/model-search-phylo"
     jati: "/Users/mrzi/Documents/develop/tkf_eval/tools/JATI/target/debug/jati"
     indel_asr: "/Users/mrzi/Documents/develop/tkf_eval/tools/indel_asr/target/debug/indel_asr"
@@ -19,6 +20,7 @@ tools_paths:
     iqtree3: "/cfs/earth/scratch/mrzi/.conda/envs/snakemake/bin/iqtree"
     root_tree: "/cfs/earth/scratch/mrzi/develop/tkf_eval/tools/root_tree/target/debug/root_tree_and_internal_labels"
     simulate_tkf: "/cfs/earth/scratch/mrzi/develop/tkf_eval/tools/simulate_tkf/target/debug/simulate_tkf"
+    prune_empty_leaves: "/cfs/earth/scratch/mrzi/develop/tkf_eval/tools/prune_empty_leaves/main.py"
     model_search_phylo: "/cfs/earth/scratch/mrzi/develop/tkf_eval/tools/model_search_phylo/target/debug/model-search-phylo"
     jati: "/cfs/earth/scratch/mrzi/develop/tkf_eval/tools/JATI/target/debug/jati"
     indel_asr: "/cfs/earth/scratch/mrzi/develop/tkf_eval/tools/indel_asr/target/debug/indel_asr"
@@ -56,7 +58,8 @@ msa_sim:
       tkf_root_length: ["sampled", "expected"]
       # tkf_root_length: ["sampled", "1000"]
       model: ["jc69"]
-      path_snippet: "l{lambda}_mu{mu}_r{r}_max{max_insertion}_len{tkf_root_length}_{model}"
+      empty_leaves: ["retry", "prune"] # perhaps also add this to the alisim (although it might be less likely since we usually? create longer alignments with alisim)
+      path_snippet: "l{lambda}_mu{mu}_r{r}_max{max_insertion}_len{tkf_root_length}_{model}_empty_leaves_{empty_leaves}"
     alisim:
       model: ["JC"]
       root_length: []

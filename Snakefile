@@ -15,8 +15,8 @@ PATHS = config["tool_paths"][ENV]
 EVOLVER = PATHS["evolver"]
 ROOTER = PATHS["root_tree"]
 PYTHON = PATHS["python_bin"]
-PYTHON_MODULE = PATHS.get("python_module", "")
 SIMULATE_TKF = PATHS["simulate_tkf"]
+PRUNE_EMPTY_LEAVES = PATHS["prune_empty_leaves"]
 IQTREE3 = PATHS["iqtree3"]
 MODEL_SEARCH_PHYLO = PATHS["model_search_phylo"]
 JATI = PATHS["jati"]
@@ -62,6 +62,10 @@ rule all_indel_and_param_infs:
     input:
         make_targets(config, "tree_sim", "msa_sim", primary="indel_and_param_inf")
 
+rule all_tkf_msas_param_infs:
+    input:
+        [t + "/masa.fasta" for t in rules.all_param_infs.input if "/tkf/" in t],
+
 rule all_tkf_msas_indel_infs:
     input:
         [t + "/masa.fasta" for t in rules.all_indel_infs.input if "/tkf/" in t],
@@ -73,7 +77,7 @@ rule all_tkf_msas_indel_and_param_infs:
 rule all_sanity:
     input:
         rules.all_msas.input,
-        rules.all_param_infs.input,
+        rules.all_tkf_msas_param_infs.input,
         rules.all_tkf_msas_indel_infs.input,
         rules.all_tkf_msas_indel_and_param_infs.input
 
@@ -88,7 +92,6 @@ rule evolver_tree:
     output:
         tree = get_tree_path("evolver"),
         tree_raw = get_tree_path("evolver") + ".raw",
-        tree_wo= get_tree_path("evolver") + ".wo"
     threads: 1
     resources:
         mem_mb=1024
@@ -98,7 +101,7 @@ rule evolver_tree:
         printf "2\\n{wildcards.species}\\n1 {wildcards.seed} 1\\n{wildcards.birth} {wildcards.death} {wildcards.sampling_fraction} {wildcards.mutation_rate}\\n0\\n" | {EVOLVER} > /dev/null 2>&1
         mkdir -p $(dirname {output.tree})
         tail -n 1 evolver.out > {output.tree}.raw
-        {ROOTER} --i {output.tree_raw} --ow {output.tree} --owo {output.tree_wo}
+        {ROOTER} --i {output.tree_raw} --o {output.tree}
         """
 
 rule iqtree_tree:
@@ -106,14 +109,13 @@ rule iqtree_tree:
     output:
         tree = get_tree_path("iqtree"),
         tree_raw = get_tree_path("iqtree") + ".raw",
-        tree_wo= get_tree_path("iqtree") + ".wo"
     threads: 1
     resources:
         mem_mb=1024
     shell:
         """
         {IQTREE3} -r {wildcards.species} --rlen {wildcards.min} {wildcards.mean} {wildcards.max} {output.tree_raw} -nt 1 --seed {wildcards.seed} -redo
-        {ROOTER} --i {output.tree_raw} --ow {output.tree} --owo {output.tree_wo}
+        {ROOTER} --i {output.tree_raw} --o {output.tree}
         """
 
 rule tree_png:
@@ -137,16 +139,21 @@ rule tree_png:
 #######################################################################
 #######################################################################
 
+def emtpy_leaves_config_valid(wildcards):
+    assert wildcards.empty_leaves in ["retry", "prune"]
+
 rule simulate_tkf_alignment:
     priority: lambda wildcards: compute_priority(wildcards)
     input:
         tree = TREE_PATH,
-        tree_wo = TREE_PATH + ".wo" # it complained about the (); around the
     output:
         msa = get_msa_output("tkf") + "/msa.fasta",
         masa = get_msa_output("tkf") + "/masa.fasta",
-        tree_w_internal = get_msa_output("tkf") + "/tree.nwk",
-        tree_w_internal_wo = get_msa_output("tkf") + "/tree.nwk.wo"
+        tree = get_msa_output("tkf") + "/tree.nwk",
+    params:
+        valid_config = lambda wildcards: emtpy_leaves_config_valid(wildcards),
+        retry_if_empty_leaf = lambda wildcards: "--retry-if-empty-leaf" if wildcards.empty_leaves == "retry" else "",
+        prune_empty_leaves = lambda wildcards: wildcards.empty_leaves == "prune"
     threads: 1
     resources:
         mem_mb=4096
@@ -160,8 +167,13 @@ rule simulate_tkf_alignment:
             --max-insertion-length {wildcards.max_insertion} \
             --root-length {wildcards.tkf_root_length} \
             --seed {wildcards.seed} \
-            --output-dir $(dirname {output.msa})
-        cp {input.tree_wo} {output.tree_w_internal_wo}
+            --output-dir $(dirname {output.msa}) \
+            {params.retry_if_empty_leaf}
+        cp {input.tree} {output.tree}
+
+        if [ {params.prune_empty_leaves} = True ]; then
+            {PYTHON} {PRUNE_EMPTY_LEAVES} --tree {output.tree} --msa {output.msa} --masa {output.masa}
+        fi
         """
 
 rule tkf_sim_alignment_logl: 
@@ -222,11 +234,9 @@ rule simulate_alisim_alignment:
     priority: lambda wildcards: compute_priority(wildcards)
     input:
         tree = TREE_PATH,
-        tree_wo = TREE_PATH + ".wo" # it complained about the (); around the whole newick tree so we use this instead
     output:
         msa = get_msa_output("alisim") + "/msa.fasta",
-        tree_w_internal = get_msa_output("alisim") + "/tree.nwk",
-        tree_w_internal_wo = get_msa_output("alisim") + "/tree.nwk.wo"
+        tree = get_msa_output("alisim") + "/tree.nwk",
     threads: 1
     resources:
         mem_mb=1024
@@ -236,22 +246,20 @@ rule simulate_alisim_alignment:
         {IQTREE3} \
             --alisim $(dirname {output.msa})/msa \
             -m {wildcards.model} \
-            -t {input.tree_wo} \
+            -t {input.tree} \
             --indel {wildcards.ir},{wildcards.ip} \
             --length {wildcards.root_length} \
             --seed {wildcards.seed} \
             --out-format fasta \
             --no-unaligned
         mv $(dirname {output.msa})/msa.fa {output.msa}
-        cp {input.tree} {output.tree_w_internal}
-        cp {input.tree_wo} {output.tree_w_internal_wo}
+        cp {input.tree} {output.tree}
         """
 
 rule simulate_alisim_ancestral_alignment:
     priority: lambda wildcards: compute_priority(wildcards)
     input:
         tree = TREE_PATH,
-        tree_wo = TREE_PATH + ".wo" # it complained about the (); around the whole newick tree so we use this instead
     output:
         msa = get_msa_output("alisim") + "/masa.fasta",
     threads: 1
@@ -263,7 +271,7 @@ rule simulate_alisim_ancestral_alignment:
         {IQTREE3} \
             --alisim $(dirname {output.msa})/masa \
             -m {wildcards.model} \
-            -t {input.tree_wo} \
+            -t {input.tree} \
             --indel {wildcards.ir},{wildcards.ip} \
             --length {wildcards.root_length} \
             --seed {wildcards.seed} \
@@ -317,7 +325,7 @@ rule jati_model_param_search:
 rule iqtree_model_param_search:
     input:
         msa = MSA_PATH + "/msa.fasta",
-        tree = MSA_PATH + "/tree.nwk.wo"
+        tree = MSA_PATH + "/tree.nwk"
     priority: lambda wildcards, input: compute_priority(wildcards, input.msa)
     output:
         logl = get_inf_output("param_inf", "iqtree_model_param_search") + "/logl.out",
