@@ -8,6 +8,7 @@ import sys
 def main():
     parser = argparse.ArgumentParser(description="Submit Snakemake jobs to Slurm")
     parser.add_argument( "--total-seeds", type=int, required=True, help="Total number of seeds")
+    parser.add_argument( "--start-seed", type=int, default=0, help="Starting seed number (default: 0)")
     parser.add_argument( "--seeds-per-group", type=int, required=True, help="Number of seeds per group")
     parser.add_argument( "--rule", type=str, default="all_sanity", help="Snakemake rule to run")
     parser.add_argument( "--cores", type=int, default=30, help="Number of cores per task")
@@ -32,7 +33,7 @@ def main():
     # Submit one sbatch job per seed group
     submitted = 0
     for group_id in range(num_groups):
-        start = group_id * args.seeds_per_group + 1
+        start = group_id * args.seeds_per_group + 1 + args.start_seed
         end = min(start + args.seeds_per_group - 1, args.total_seeds)
         seed_list = "[" + ",".join(str(s) for s in range(start, end + 1)) + "]"
 
@@ -48,6 +49,8 @@ def main():
             "--wrap",
             f"snakemake --cores {cpus_per_task} {args.rule} --config seeds=\"{seed_list}\" paths=hpc",
         ]
+
+        print(f"Submitting group {group_id}: seeds={seed_list} -> Command: {' '.join(cmd)}")
 
         result = subprocess.run(cmd, capture_output=True, text=True)
         if result.returncode != 0:

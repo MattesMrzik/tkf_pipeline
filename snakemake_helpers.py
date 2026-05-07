@@ -8,6 +8,13 @@ from snakemake.io import expand
 from viz.sim.msa.utils import load_msa
 from viz.utils import load_snakemake_config_yaml
 
+def get_seeds(config):
+    """Get seeds list from config. Uses seed_arange if set, otherwise uses seeds list."""
+    if "seed_arange" in config:
+        n = config["seed_arange"]
+        return list(range(1, n + 1))
+    return config.get("seeds", [])
+
 def infer_wildcard_constraints(config):
     tools = {}
     for candidate in config.values():
@@ -30,7 +37,7 @@ def infer_wildcard_constraints_flat(cfg_dict):
             elif isinstance(v, list) and len(v) > 0 and isinstance(v[0], list):
                 raise ValueError(f"Use list of dicts instead of list of lists for {k}")
             elif isinstance(v, list) and len(v) == 0:
-                print("empty list, skipping")
+                print(f"empty list in {k}, skipping")
                 continue
             else:
                 val = v[0] if isinstance(v, list) else v
@@ -102,7 +109,7 @@ def make_targets(cfg, *stages, primary, suffix=""):
         kwargs = {wc: val
                   for (tool_wc, params_wc), (tool, params) in zip(wc_pairs, combo)
                   for wc, val in [(tool_wc, tool), (params_wc, params)]}
-        targets += cast(list[str], expand(path_template, seed=cfg["seeds"], **kwargs))
+        targets += cast(list[str], expand(path_template, seed=get_seeds(cfg), **kwargs))
     return targets
 
 def get_tree_path(tool_name):

@@ -7,7 +7,6 @@ configfile: "config.yaml"
 import os
 from snakemake_helpers import infer_wildcard_constraints, make_targets, get_tree_path, get_msa_output, get_inf_output, get_inf_output_with_msa_params, compute_priority
 
-SEEDS = config["seeds"]
 ENV = config["paths"]
 PATHS = config["tool_paths"][ENV]
 
@@ -116,6 +115,36 @@ rule iqtree_tree:
         """
         {IQTREE3} -r {wildcards.species} --rlen {wildcards.min} {wildcards.mean} {wildcards.max} {output.tree_raw} -nt 1 --seed {wildcards.seed} -redo
         {ROOTER} --i {output.tree_raw} --o {output.tree}
+        """
+
+rule dendropy_tree:
+    priority: lambda wildcards: compute_priority(wildcards)
+    output:
+        tree = get_tree_path("dendropy"),
+    threads: 1
+    resources:
+        mem_mb=1024
+    shell:
+        """
+        python3 - <<'EOF'
+import dendropy
+import numpy as np
+
+n = int({wildcards.species})
+mean = float({wildcards.mean})
+
+tree = dendropy.simulate.treesim.birth_death_tree( birth_rate=1.0, death_rate=0.0, num_extant_tips=n)
+
+rng = np.random.default_rng()
+for edge in tree.preorder_edge_iter():
+    new_blen = rng.exponential(scale=mean)
+    new_blen = max(new_blen, 1e-8) # avoid zero-length branches which can cause issues for some tools
+    new_blen = min(new_blen, mean*10) # avoid extremely long branches which can cause issues for some tools
+    edge.length = rng.exponential(scale=mean)
+
+tree.write(path="{output.tree}.raw", schema="newick", suppress_rooting=True)
+EOF
+        {ROOTER} --i {output.tree}.raw --o {output.tree}
         """
 
 rule tree_png:
