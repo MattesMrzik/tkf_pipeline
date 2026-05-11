@@ -37,6 +37,7 @@ def main():
         end = min(start + args.seeds_per_group - 1, args.total_seeds)
         seed_list = "[" + ",".join(str(s) for s in range(start, end + 1)) + "]"
 
+        # somehow its enough to have the snakemake env active on this login node shell and not on the compute nodes
         cmd = [
             "sbatch",
             "--partition", args.partition,
@@ -52,12 +53,12 @@ def main():
 
         print(f"Submitting group {group_id}: seeds={seed_list} -> Command: {' '.join(cmd)}")
 
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         if result.returncode != 0:
             print(f"Error submitting group {group_id}: {result.stderr}", file=sys.stderr)
         else:
             job_id = result.stdout.strip().split()[-1]
-            print(f"Group {group_id}: seeds={seed_list} -> Job {job_id}")
+            print(f"Group {group_id}: seeds={seed_list} -> Job {str(job_id)}")
             submitted += 1
 
     print("-" * 50)
