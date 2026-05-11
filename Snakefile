@@ -55,23 +55,24 @@ rule all_tree_pngs:
 
 rule all_indel_infs:
     input:
-        make_targets(config, "tree_sim", "msa_sim", primary="indel_inf")
+        make_targets(config, "tree_sim", "msa_sim", primary="indel_inf", suffix="/masa.fasta")
 
 rule all_indel_and_param_infs:
     input:
-        make_targets(config, "tree_sim", "msa_sim", primary="indel_and_param_inf")
+        make_targets(config, "tree_sim", "msa_sim", primary="indel_and_param_inf", suffix="/masa.fasta"),
+        make_targets(config, "tree_sim", "msa_sim", primary="indel_and_param_inf", suffix="/params.json")
 
 rule all_tkf_msas_param_infs:
     input:
-        [t + "/masa.fasta" for t in rules.all_param_infs.input if "/tkf/" in t],
+        [t for t in rules.all_param_infs.input if "/tkf/" in t],
 
 rule all_tkf_msas_indel_infs:
     input:
-        [t + "/masa.fasta" for t in rules.all_indel_infs.input if "/tkf/" in t],
+        [t for t in rules.all_indel_infs.input if "/tkf/" in t],
 
 rule all_tkf_msas_indel_and_param_infs:
     input:
-        [t + "/masa.fasta" for t in rules.all_indel_and_param_infs.input if "/tkf/" in t],
+        [t for t in rules.all_indel_and_param_infs.input if "/tkf/" in t],
 
 rule all_sanity:
     input:
