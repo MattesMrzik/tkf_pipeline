@@ -1,4 +1,5 @@
 import os
+from typing import reveal_type
 import dendropy
 import glob
 import numpy as np
@@ -39,7 +40,7 @@ def leaf_distance_to_root(tree: dendropy.Tree):
     """Distance from all leaves to the root node (in branch length units)."""
     leaf_nodes = tree.leaf_nodes()
     if not leaf_nodes:
-        return 0.0
+        return {}
     root = tree.seed_node
     total_distances = []
     for leaf in leaf_nodes:
@@ -75,7 +76,7 @@ def leaf_steps_to_root(tree: dendropy.Tree):
 
     leaf_nodes = tree.leaf_nodes()
     if not leaf_nodes:
-        return 0.0
+        return {}
     
     total_steps = []
     for leaf in leaf_nodes:
@@ -114,7 +115,7 @@ def pairwise_leaf_distances(tree):
     """Compute pairwise distances between all pairs of leaves (both steps and branch lengths)."""
     leaf_nodes = tree.leaf_nodes()
     if len(leaf_nodes) < 2:
-        return None
+        return {}
 
     leaf_to_root_paths = {}
     for leaf in leaf_nodes:
@@ -161,7 +162,7 @@ def main():
     config = load_snakemake_config_yaml()
     base_dir = os.path.join(PROJECT_ROOT, "results/sim/tree")
     os.makedirs(base_dir, exist_ok=True)
-    out_path = os.path.join(base_dir, "tree_summary.tsv")
+    out_path = os.path.join(base_dir, "summary.tsv")
 
     all_rows = []
     all_keys = set()
@@ -193,7 +194,7 @@ def main():
             row.update(pairwise_leaf_dists)
             row["max_leaf_dist_to_root"] = max_leaf_distance_to_root(t)
             row["max_leaf_steps_to_root"] = max_leaf_steps_to_root(t)
-            
+
             all_rows.append(row)
             all_keys.update(row.keys())
 
