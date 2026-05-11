@@ -85,6 +85,7 @@ def expand_tool_combos(cfg_dict):
                 yield tool, snippet
 
 config = load_snakemake_config_yaml()
+wildcard_constraints = infer_wildcard_constraints(config)
 
 # To match the wildcards in the paths to the correct stages
 # The first must match the tool category name in the config as it is used to retrieve the path
@@ -110,6 +111,7 @@ def make_targets(cfg, *stages, primary, suffix=""):
                   for (tool_wc, params_wc), (tool, params) in zip(wc_pairs, combo)
                   for wc, val in [(tool_wc, tool), (params_wc, params)]}
         targets += cast(list[str], expand(path_template, seed=get_seeds(cfg), **kwargs))
+    print(f"Generated {len(targets)} targets for {primary}")
     return targets
 
 def get_tree_path(tool_name):
@@ -134,13 +136,12 @@ def get_inf_output_with_msa_params(tool_type, tool_name, msa_tool_name):
     return config[tool_type]["dir"].replace("{inference_tool}", tool_name).replace("{inf_params}", snippet).replace("{msa_params}", msa_snippet)
 
 def get_tool_params(path, config, tool_key):
-    wc_constraints = infer_wildcard_constraints(config)
     tools = config[tool_key]["tools"]
     for tool_name, tool_conf in tools.items():
         search_pattern = f'{tool_name}/{tool_conf["path_snippet"]}'
         for replace_match in re.finditer(r"\{(\w+)\}", tool_conf["path_snippet"]):
             wc_name = replace_match.group(1)
-            wc_pattern = wc_constraints.get(wc_name, r"[^_/]+")
+            wc_pattern = wildcard_constraints.get(wc_name, r"[^_/]+")
             search_pattern = search_pattern.replace(f"{{{wc_name}}}", f"(?P<{wc_name}>{wc_pattern})")
         match = re.search(search_pattern, path)
         if match:

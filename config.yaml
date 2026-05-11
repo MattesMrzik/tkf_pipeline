@@ -26,7 +26,8 @@ tool_paths:
     indel_asr: "/cfs/earth/scratch/mrzi/develop/tkf_eval/tools/indel_asr/target/debug/indel_asr"
 
 # General
-seeds: [1]
+# seeds: [1, 2, 3, 4, 5]  # explicit list of seeds
+seed_arange: 20 # generates seeds 1 to n (overrides seeds if set)
 
 tree_sim:
   dir: "results/sim/tree/{tree_sim_tool}/{tree_params}/seed{seed}.nwk"
@@ -39,26 +40,79 @@ tree_sim:
       mutation_rate: [1.0]
       path_snippet: "s{species}_b{birth}_d{death}_f{sampling_fraction}_m{mutation_rate}"
     iqtree:
-      species: [8, 16, 32, 64]
+      species: []
+      # # what should the max be?
       blen:
-        - {min: 0.0001, mean: 0.1, max: 1}
-        - {min: 0.0001, mean: 0.2, max: 1}
-        - {min: 0.0001, mean: 0.4, max: 1}
+        # - {mean: 0.2, species: 8} 
+        # - {mean: 0.1, species: 16} 
+        # - {mean: 0.05, species: 32} 
+        # - {mean: 0.025, species: 64}
+        #
+        # - {mean: 0.1, species: 8}
+        # - {mean: 0.05, species: 16}
+        # - {mean: 0.025, species: 32}
+        # - {mean: 0.0125, species: 64}
+        #
+        # - {mean: 0.05, species: 8}
+        # - {mean: 0.025, species: 16}
+        # - {mean: 0.0125, species: 32}
+        # - {mean: 0.00625, species: 64}
+        # - {mean: 0.23284823284823292, species: 8}
+        # - {mean: 0.16801576371675894, species: 16}
+        # - {mean: 0.1307832690392409, species: 32}
+        # - {mean: 0.10684072006587403, species: 64}
+        # - {mean: 0.29106029106029113, species: 8}
+        # - {mean: 0.21001970464594868, species: 16}
+        # - {mean: 0.16347908629905109, species: 32}
+        # - {mean: 0.13355090008234252, species: 64}
+        # - {mean: 0.34927234927234935, species: 8}
+        # - {mean: 0.2520236455751384, species: 16}
+        # - {mean: 0.1961749035588613, species: 32}
+        # - {mean: 0.16026108009881102, species: 64}
+      min: 0.0001
+      max: 10
       path_snippet: "s{species}_blen{min}_{mean}_{max}"
+    dendropy:
+      blen:
+        - {mean: 0.23284823284823292, species: 8}
+        - {mean: 0.16801576371675894, species: 16}
+        - {mean: 0.1307832690392409, species: 32}
+        - {mean: 0.10684072006587403, species: 64}
+        - {mean: 0.29106029106029113, species: 8}
+        - {mean: 0.21001970464594868, species: 16}
+        - {mean: 0.16347908629905109, species: 32}
+        - {mean: 0.13355090008234252, species: 64}
+        - {mean: 0.34927234927234935, species: 8}
+        - {mean: 0.2520236455751384, species: 16}
+        - {mean: 0.1961749035588613, species: 32}
+        - {mean: 0.16026108009881102, species: 64}
+      path_snippet: "s{species}_blen{mean}"
 
 msa_sim:
   dir: "results/sim/msa/{tree_sim_tool}/{tree_params}/{msa_sim_tool}/{msa_params}/seed{seed}"
   tools:
     tkf:
-      params:
-        - {lambda: 0.03, mu: 0.033, r: 0.8}
+      # params:
+        # - {lambda: 0.03, mu: 0.033, r: 0.8}
         # - {lambda: 0.08, mu: 0.1, r: 0.5}
         # - {lambda: 0.1, mu: 0.2, r: 0.2}
+      lm: # TODO: perhaps one less param combi but then also some expected 1000 len seqs
+        # - {lambda: 0.001, mu: 0.00105} # for r = 0.8 the mean is 100
+        # - {lambda: 0.001, mu: 0.00101} # for r = 0.8 the mean is 500
+        - {lambda: 0.003, mu: 0.00315} # for r = 0.8 the mean is 100
+        - {lambda: 0.003, mu: 0.00303} # for r = 0.8 the mean is 500
+        - {lambda: 0.01, mu: 0.0105} # for r = 0.8 the mean is 100
+        - {lambda: 0.01, mu: 0.0101} # for r = 0.8 the mean is 500
+        - {lambda: 0.03, mu: 0.0315} # for r = 0.8 the mean is 100
+        - {lambda: 0.03, mu: 0.0303} # for r = 0.8 the mean is 500
+      r: [0.95, 0.8, 0.7]
       max_insertion: 50
       tkf_root_length: ["sampled", "expected"]
       # tkf_root_length: ["sampled", "1000"]
       model: ["jc69"]
-      empty_leaves: ["retry", "prune"] # perhaps also add this to the alisim (although it might be less likely since we usually? create longer alignments with alisim)
+      # perhaps also add this to the alisim (although it might be less likely since we usually? create longer alignments with alisim)
+      # empty_leaves: ["retry", "prune"]
+      empty_leaves: ["prune"]
       path_snippet: "l{lambda}_mu{mu}_r{r}_max{max_insertion}_len{tkf_root_length}_{model}_empty_leaves_{empty_leaves}"
     alisim:
       model: ["JC"]
@@ -97,7 +151,7 @@ indel_and_param_inf:
   tools:
     jati_asr_and_params:
       start_params:
-        - {s_l: 0.1, s_m: 0.2, s_r: 0.5}
+        - {s_l: 0.01, s_m: 0.02, s_r: 0.5}
       max_iterations: 5
       epsilon: 1e-5
       path_snippet: "l{s_l}_mu{s_m}_r{s_r}_{max_iterations}iter_epsilon{epsilon}"
