@@ -110,13 +110,12 @@ def max_leaf_steps_to_root(tree: dendropy.Tree) -> float:
     
     return max_steps
 
-def pairwise_leaf_step_distances(tree):
-    """Compute pairwise distances (number of edges) between all pairs of leaves."""
+def pairwise_leaf_distances(tree):
+    """Compute pairwise distances between all pairs of leaves (both steps and branch lengths)."""
     leaf_nodes = tree.leaf_nodes()
     if len(leaf_nodes) < 2:
         return None
 
-    # Precompute the path from each leaf to the root
     leaf_to_root_paths = {}
     for leaf in leaf_nodes:
         path = []
@@ -126,26 +125,36 @@ def pairwise_leaf_step_distances(tree):
             node = node.parent_node
         leaf_to_root_paths[leaf] = path
 
-    pairwise_distances = []
+    step_distances = []
+    branch_distances = []
     for i in range(len(leaf_nodes)):
         for j in range(i + 1, len(leaf_nodes)):
             leaf1, leaf2 = leaf_nodes[i], leaf_nodes[j]
             path1, path2 = leaf_to_root_paths[leaf1], leaf_to_root_paths[leaf2]
 
-            # Find the common ancestor
-            # Start from the end of the paths (root) and move backwards until they diverge
             common_ancestor_index = 0
             while (common_ancestor_index < len(path1) and 
                    common_ancestor_index < len(path2) and 
                    path1[-(common_ancestor_index + 1)] == path2[-(common_ancestor_index + 1)]):
                 common_ancestor_index += 1
 
-            # Calculate distance as steps from each leaf to the common ancestor
-            distance = (len(path1) - common_ancestor_index) + (len(path2) - common_ancestor_index)
-            pairwise_distances.append(distance)
+            step_distance = (len(path1) - common_ancestor_index) + (len(path2) - common_ancestor_index)
+            step_distances.append(step_distance)
+
+            branch_distance = 0.0
+            for k in range(len(path1) - common_ancestor_index):
+                if path1[k].edge and path1[k].edge.length is not None:
+                    branch_distance += path1[k].edge.length
+            for k in range(len(path2) - common_ancestor_index):
+                if path2[k].edge and path2[k].edge.length is not None:
+                    branch_distance += path2[k].edge.length
+            branch_distances.append(branch_distance)
+
     d = {}
-    d["avg_pairwise_leaf_step_distance"] = np.mean(pairwise_distances)
-    d["var_pairwise_leaf_step_distance"] = np.var(pairwise_distances)
+    d["avg_pairwise_leaf_steps"] = np.mean(step_distances)
+    d["var_pairwise_leaf_steps"] = np.var(step_distances)
+    d["avg_pairwise_leaf_distance"] = np.mean(branch_distances)
+    d["var_pairwise_leaf_distance"] = np.var(branch_distances)
     return d
 
 def main():
@@ -179,7 +188,7 @@ def main():
             leaf_steps = leaf_steps_to_root(t)
             add_to_ordered_set(tree_col_names, leaf_steps.keys())
             row.update(leaf_steps)
-            pairwise_leaf_dists = pairwise_leaf_step_distances(t)
+            pairwise_leaf_dists = pairwise_leaf_distances(t)
             add_to_ordered_set(tree_col_names, pairwise_leaf_dists.keys())
             row.update(pairwise_leaf_dists)
             row["max_leaf_dist_to_root"] = max_leaf_distance_to_root(t)
