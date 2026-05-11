@@ -1,6 +1,6 @@
 import os
 
-from viz.sim.msa.msa_features import get_avg_seq_length, get_fasta_length, get_gap_stats, calculate_gap_free_entropy, get_tkf_sim_tries
+from viz.sim.msa.msa_features import get_avg_seq_length, get_fasta_length, get_gap_stats, calculate_gap_free_entropy, get_tkf_sim_tries, number_of_blocks
 from viz.sim.msa.utils import all_msa_dirs, load_msa
 from viz.utils import PROJECT_ROOT, load_snakemake_config_yaml, add_to_ordered_set, write_table
 from snakemake_helpers import get_tool_params
@@ -15,8 +15,11 @@ def main():
     tree_col_names = []
     msa_col_names = []
     
-    for d in msa_dirs:
+    n = len(msa_dirs)
+    for i, d in enumerate(msa_dirs):
         row = {}
+        if i % 10 == 0:
+            print(f"\rProcessing {i}/{n} ({i/n:.2%})", end="")
         # Extract parameters from path
         tree_params = get_tool_params(d, config, "tree_sim")
         add_to_ordered_set(tree_col_names, tree_params.keys())
@@ -32,7 +35,6 @@ def main():
 
         # Summary statistics about the MSA
         msa = load_msa(msa_path)
-        print(f"Loaded MSA from {msa_path} with {len(msa)} sequences.")
         if len(msa) == 0:
             raise ValueError(f"MSA at {msa_path} is empty.")
         row["msa_len"] = get_fasta_length(msa)
@@ -43,6 +45,7 @@ def main():
         # also count the number of retired msas sims in the case that a leaf was just gaps
         row.update(get_gap_stats(msa))
         row["avg_gap_free_entropy"] = calculate_gap_free_entropy(msa)
+        row["number_of_blocks"] = number_of_blocks(msa)
             
         all_rows.append(row)
         all_keys.update(row.keys())

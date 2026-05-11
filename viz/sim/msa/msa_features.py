@@ -38,6 +38,16 @@ def get_avg_seq_length(msa):
                 total_length += 1
     return total_length / len(msa) if msa else 0
 
+def number_of_blocks(msa):
+    block_boundaries = set()
+    for seq in msa.values():
+        for i in range(len(seq) - 1):
+            at_i = seq[i] == '-'
+            at_i_plus_1 = seq[i + 1] == '-'
+            if at_i != at_i_plus_1:
+                block_boundaries.add(i)
+    return len(block_boundaries)
+
 def get_gap_stats(msa):
     """Calculates comprehensive gap statistics for an MSA."""
     try:
