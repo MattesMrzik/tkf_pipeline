@@ -39,7 +39,7 @@ def write_table(rows, column_order, output_path):
         writer.writeheader()
         writer.writerows(rows)
 
-def get_msa_dir_from_inf(inf_dir, inf_type, msa_dir_name="msas"):
+def get_msa_dir_from_inf(inf_dir, inf_type, msa_dir_name="msa"):
     parts = inf_dir.split(os.sep)
     # results/inf/param/ get the part after inf
     inf_type_parts = inf_type.split(os.sep)
@@ -48,6 +48,7 @@ def get_msa_dir_from_inf(inf_dir, inf_type, msa_dir_name="msas"):
     inf_idx = parts.index(inf_type)
     msa_parts = list(parts)
     msa_parts[inf_idx] = msa_dir_name
+    msa_parts[inf_idx -1] = "sim" # change from inf to sim
     # the last 3 parts are tree_inf_tool, tree_inf_params and seed, we want to keep seed
     msa_dir_path = os.sep.join(msa_parts[:-3] + [msa_parts[-1]])
     return msa_dir_path
@@ -60,7 +61,7 @@ def all_inf_dirs(inf_dir_name, file_name):
             inf_dirs.append(root)
     return inf_dirs
 
-def parse_jati_time(log_path):
+def parse_jati_time_old(log_path):
     with open(log_path, 'r') as f:
         lines = f.readlines()
         # TODO: it could speed up if we reed in the last bits that probably contain the end time
@@ -80,3 +81,64 @@ def parse_jati_time(log_path):
             return seconds 
         except (ValueError, IndexError):
             return None
+
+def get_last_line(path, chunk_size=1024):
+    with open(path, "rb") as f:
+        f.seek(0, os.SEEK_END)
+        file_size = f.tell()
+
+        if file_size == 0:
+            raise ValueError("Empty file")
+
+        buffer = b""
+        position = file_size
+
+        while position > 0:
+            read_size = min(chunk_size, position)
+            position -= read_size
+
+            f.seek(position)
+            chunk = f.read(read_size)
+
+            buffer = chunk + buffer
+
+            lines = buffer.splitlines()
+
+            # We only trust the last line if we have seen
+            # at least one preceding newline separator.
+            if len(lines) >= 2:
+                return lines[-1].decode()
+
+        # If we scanned the whole file and never found
+        # a newline before the last line, then the file
+        # is effectively one line long.
+        if b"\n" not in buffer:
+            return buffer.decode().strip()
+
+        raise RuntimeError("Failed to retrieve complete last line")
+
+
+def parse_jati_time(log_path):
+    fmt = "%m/%d/%y-%H:%M:%S"
+
+    try:
+        with open(log_path, "r") as f:
+            first_line = f.readline().strip()
+
+        last_line = get_last_line(log_path).strip()
+
+        start_time_str = first_line.split()[0]
+        end_time_str = last_line.split()[0]
+
+        start_dt = datetime.strptime(start_time_str, fmt)
+        end_dt = datetime.strptime(end_time_str, fmt)
+
+        return (end_dt - start_dt).total_seconds()
+
+    except (
+        ValueError,
+        IndexError,
+        FileNotFoundError,
+        RuntimeError,
+    ):
+        return None

@@ -54,7 +54,8 @@ def main():
     remaining_cols = sorted(list(all_keys - set(column_order)))
     column_order += remaining_cols
 
-    write_table(all_rows, column_order, os.path.join(PROJECT_ROOT, "results/msa_summary.tsv"))
+    # TODO use to_csv instead, but then i need pandas
+    write_table(all_rows, column_order, os.path.join(PROJECT_ROOT, "results/sim/msa/summary.tsv"))
 
 if __name__ == "__main__":
     main()
