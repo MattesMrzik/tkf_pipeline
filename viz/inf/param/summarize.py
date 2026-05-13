@@ -18,9 +18,11 @@ def main():
     msa_col_names = []
     inf_col_names = []
 
-    for d in inf_dirs:
+    n = len(inf_dirs)
+    for i, d in enumerate(inf_dirs):
         row = {"inf_dir": d}
-        print(f"Processing {d}...")
+        if i % 10 == 0:
+            print(f"\rProcessing {i}/{n} ({i/n:.2%})", end="")
 
         tree_params = get_tool_params(d, config, "tree_sim")
         add_to_ordered_set(tree_col_names, tree_params.keys())
@@ -30,7 +32,7 @@ def main():
         add_to_ordered_set(msa_col_names, msa_params.keys())
         row.update(msa_params)
 
-        inf_params = get_tool_params(d, config, "model_param_inf")
+        inf_params = get_tool_params(d, config, "param_inf")
         add_to_ordered_set(inf_col_names, inf_params.keys())
         row.update(inf_params)
 
@@ -43,7 +45,9 @@ def main():
                 row["i_r"] = params[2]
 
         row["logl"] = get_last_line_value(os.path.join(d, "logl.out"))
-        row["logl_true"] = get_last_line_value(os.path.join(get_msa_dir_from_inf(d, MODEL_INF_DIR), "sim_indel_logl.out"))
+        msa_dir = get_msa_dir_from_inf(d, MODEL_INF_DIR)
+        sim_indel_logl_path = os.path.join(msa_dir, "sim_indel_logl.out")
+        row["logl_true"] = get_last_line_value(sim_indel_logl_path)
 
         log_path = os.path.join(d, "log.txt")
         row["time"] = parse_jati_time(log_path)
@@ -56,7 +60,7 @@ def main():
     column_order += remaining_cols
 
     write_table(
-        all_rows, column_order, os.path.join(PROJECT_ROOT, "results/model_inf_summary.tsv")
+        all_rows, column_order, os.path.join(PROJECT_ROOT, "results/inf/param/summary.tsv")
     )
 
 if __name__ == "__main__":

@@ -41,6 +41,10 @@ def write_table(rows, column_order, output_path):
 
 def get_msa_dir_from_inf(inf_dir, inf_type, msa_dir_name="msas"):
     parts = inf_dir.split(os.sep)
+    # results/inf/param/ get the part after inf
+    inf_type_parts = inf_type.split(os.sep)
+    index_of_inf = inf_type_parts.index("inf")
+    inf_type = inf_type_parts[index_of_inf + 1]
     inf_idx = parts.index(inf_type)
     msa_parts = list(parts)
     msa_parts[inf_idx] = msa_dir_name
@@ -68,13 +72,11 @@ def parse_jati_time(log_path):
         try:
             start_time_str = first_line.split(' ')[0]
             end_time_str = last_line.split(' ')[0]
-            print(f"Parsed start time: {start_time_str}, end time: {end_time_str}")
             
             start_dt = datetime.strptime(start_time_str, fmt)
             end_dt = datetime.strptime(end_time_str, fmt)
             
             seconds = (end_dt - start_dt).total_seconds()
-            print(f"Calculated runtime in seconds: {seconds}")
             return seconds 
         except (ValueError, IndexError):
             return None

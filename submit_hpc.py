@@ -46,7 +46,7 @@ def main():
             "--cpus-per-task", str(cpus_per_task),
             "--mem", f"{mem_gb}G",
             "--nodes", "1",
-            f"--job-name=seed_g{group_id}",
+            f"--job-name=seed_group_{group_id}",
             "--wrap",
             f"snakemake --cores {cpus_per_task} {args.rule} --config seeds=\"{seed_list}\" paths=hpc",
         ]
