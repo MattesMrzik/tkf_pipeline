@@ -45,6 +45,10 @@ rule all_param_infs:
     input:
         make_targets(config, "tree_sim", "msa_sim", primary="param_inf", suffix="/logl.out")
 
+rule param_inf_phylo_dir_links:
+    input:
+        make_targets(config, "tree_sim", "msa_sim", primary="param_inf", suffix="/phylo_dir_link")
+
 rule all_tree_infs:
     input:
         make_targets(config, "tree_sim", "msa_sim", primary="tree_inf", suffix="/final_tree.nwk")
@@ -351,6 +355,18 @@ rule jati_model_param_search:
         mv {params.out_base}/*/*.json {output.params}
         rm -rf {params.out_base}/*/
         """
+
+rule jati_model_param_search_link_phylo_dir:
+    input:
+        logl = get_inf_output("param_inf", "jati_model_param_search") + "/logl.out",
+        msa = MSA_PATH + "/msa.fasta",
+    output: 
+        phylo_dir_link = directory(get_inf_output("param_inf", "jati_model_param_search") + "/phylo_dir_link")
+    run:
+        import os
+        target = os.path.abspath(MSA_PATH.format(**wildcards))
+        link = os.path.abspath(output.phylo_dir_link)
+        os.symlink(target, link)
 
 rule iqtree_model_param_search:
     input:
